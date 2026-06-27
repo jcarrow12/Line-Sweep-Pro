@@ -1,21 +1,28 @@
 /* =============================================================================
-   clutch-glass.css — dark frosted-glass surface variant for Clutch panels
+   clutch-glass.css — dark frosted-glass THEME for Clutch panels (toggleable)
    Load AFTER clutch.css:
+     <link rel="stylesheet" href="clutch-tokens.css">
      <link rel="stylesheet" href="clutch.css">
      <link rel="stylesheet" href="clutch-glass.css">
 
-   IMPORTANT — what "frosted glass" can and can't do in a CEP panel:
-   A docked AE panel renders into an opaque rectangle and has NO access to the
+   Activate by adding the class to the root element (toggle at runtime):
+     document.body.classList.toggle('theme-glass');
+   With the class OFF, Clutch renders its normal solid surfaces (clutch.css).
+   With it ON, every surface below is re-skinned as dark translucent glass.
+
+   IMPORTANT — what "frosted glass" can/can't do in a CEP panel:
+   A docked AE panel renders into an opaque rectangle with NO access to the
    After Effects pixels behind it, so backdrop-filter CANNOT blur the timeline /
-   comp viewer beneath the panel. This file therefore does two things:
+   comp viewer beneath the panel. This theme therefore does two things:
      1) FAUX frost for the panel base — translucent fills over the carbon
         backdrop + a faint light edge so surfaces read as dark glass.
      2) REAL backdrop-filter blur for elements that float over YOUR OWN panel
         content (context menu, status bar, overlays) — there it genuinely blurs.
    ============================================================================= */
 
-:root{
-  /* translucent re-tints of the brand surfaces (same hues, now see-through) */
+/* translucent re-tints of the brand surfaces (same hues, now see-through).
+   Scoped to the theme so they don't leak into the default solid look. */
+.theme-glass{
   --panel-glass:   rgba(20, 22, 26, 0.62);   /* was --panel  #141619 */
   --panel2-glass:  rgba(25, 28, 32, 0.66);   /* was --panel2 #191C20 */
   --menu-glass:    rgba(22, 25, 29, 0.80);   /* floating menu — denser for legibility */
@@ -26,7 +33,7 @@
 
 /* Richer base so translucency has depth to sit on: carbon + a soft ember-tinted
    radial bloom behind everything. Pair with <div class="backdrop"></div>. */
-.backdrop{
+.theme-glass .backdrop{
   background:
     radial-gradient(120% 90% at 50% -10%, rgba(255,122,24,0.06), transparent 55%),
     var(--carbon);
@@ -37,7 +44,7 @@
 }
 
 /* ---- generic glass surface helper: add class="glass" to any container ---- */
-.glass{
+.theme-glass .glass{
   background: var(--panel-glass);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
@@ -51,15 +58,15 @@
 /* ---- re-skin existing components onto translucent surfaces ---- */
 
 /* raised controls */
-button{ background: var(--panel2-glass); }
-button:hover{ background: rgba(32,36,42,0.75); }
-.cl-action{ background: var(--panel2-glass); }
+.theme-glass button{ background: var(--panel2-glass); }
+.theme-glass button:hover{ background: rgba(32,36,42,0.75); }
+.theme-glass .cl-action{ background: var(--panel2-glass); }
 
 /* inputs */
-.cl-input{ background: var(--panel-glass); }
+.theme-glass .cl-input{ background: var(--panel-glass); }
 
 /* floating context menu — real frost: it sits over your panel's own content */
-.cl-menu{
+.theme-glass .cl-menu{
   background: var(--menu-glass);
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
   backdrop-filter: blur(22px) saturate(1.2);
@@ -70,7 +77,7 @@ button:hover{ background: rgba(32,36,42,0.75); }
 }
 
 /* status bar — translucent strip pinned over content; real blur applies */
-.cl-status{
+.theme-glass .cl-status{
   background: var(--panel-glass);
   -webkit-backdrop-filter: blur(var(--glass-blur));
   backdrop-filter: blur(var(--glass-blur));
@@ -78,7 +85,7 @@ button:hover{ background: rgba(32,36,42,0.75); }
 }
 
 /* generic overlay/modal scrim that blurs the panel underneath it */
-.cl-overlay{
+.theme-glass .cl-overlay{
   position: fixed; inset: 0; z-index: 500;
   background: rgba(11,12,14,0.45);
   -webkit-backdrop-filter: blur(8px);
@@ -88,7 +95,7 @@ button:hover{ background: rgba(32,36,42,0.75); }
 /* graceful fallback: if backdrop-filter is unsupported, go more opaque so
    text never loses contrast against AE behind the panel */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
-  :root{
+  .theme-glass{
     --panel-glass:  rgba(20,22,26,0.94);
     --panel2-glass: rgba(25,28,32,0.96);
     --menu-glass:   rgba(22,25,29,0.97);

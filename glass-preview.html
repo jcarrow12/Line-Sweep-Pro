@@ -24,9 +24,13 @@
       linear-gradient(135deg, #20242b, #0c0d10);
   }
   .stage{ position:relative; z-index:1; min-height:100%; display:flex; align-items:center; justify-content:center; padding:40px; }
+  /* default (solid) panel surface — what Clutch shows with theme OFF */
   .panel{
     width:340px; padding:18px; display:flex; flex-direction:column; gap:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 10px 34px rgba(0,0,0,0.45);
   }
+  .toggle{ position:fixed; top:14px; left:14px; z-index:10; }
   .row{ display:flex; gap:10px; align-items:center; }
   .field{ display:flex; flex-direction:column; gap:6px; }
   label.k{ font-size:var(--fs-label); color:var(--grey); letter-spacing:.04em; text-transform:uppercase; }
@@ -38,6 +42,9 @@
        you can judge the frost. NOTE: in the real CEP panel this content is NOT
        blurrable — this preview is optimistic on purpose. -->
   <div class="fake-ae"></div>
+
+  <!-- runtime theme switch: this is the only line of app code needed to adopt it -->
+  <button class="toggle" onclick="document.body.classList.toggle('theme-glass')">Toggle glass</button>
 
   <div class="stage">
     <div class="panel glass">
