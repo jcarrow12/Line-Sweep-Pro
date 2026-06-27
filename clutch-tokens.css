@@ -1,0 +1,29 @@
+/* ============================================================
+   Clutch Tokens — shared brand tokens for the Clutch suite
+   (Apply, Snap, Voice, …).
+
+   SINGLE SOURCE OF TRUTH. Each tool bundles a copy in its web
+   root and links it in <head> BEFORE its own stylesheet:
+       <link rel="stylesheet" href="clutch-tokens.css">
+
+   Change a token here, re-copy into each tool, and the whole
+   suite updates. (Sibling of clutch-motion.css, same model.)
+
+   Type roles:
+     --mono     body / UI / labels / buttons
+     --display  the Clutch wordmark + headings
+   Tools may still contextually override these (e.g. an
+   "AE Native" theme that swaps to system fonts) in their own CSS.
+
+   The @import below LOADS the web fonts too, so a tool only needs
+   to link this one file — change a face here and re-copy, and the
+   whole suite both uses AND loads it. (@import must stay first.)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root{
+  /* Body/UI face. (Was Geist Mono; the suite moved to Inter 2026-06-25.) */
+  --mono: 'Inter', system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Display face — the Clutch wordmark + headings. */
+  --display: 'Space Grotesk', system-ui, "Segoe UI", sans-serif;
+}

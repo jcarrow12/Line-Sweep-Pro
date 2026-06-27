@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clutch — Frosted Glass Preview</title>
+<!-- tokens first (single source of truth; @imports Inter + Space Grotesk),
+     then base, then the glass variant. NOTE: the clutch.css I was given still
+     hardcodes Geist Mono in :root, so I load tokens LAST here to let Inter win.
+     The real fix is to delete the --mono/--display lines from clutch.css and let
+     clutch-tokens.css own them, per that file's "single source of truth" note. -->
+<link rel="stylesheet" href="clutch.css">
+<link rel="stylesheet" href="clutch-glass.css">
+<link rel="stylesheet" href="clutch-tokens.css">
+<style>
+  /* preview-only: fake an "After Effects behind the panel" so you can judge the
+     glass look. In the real CEP panel this layer does NOT exist — AE draws here
+     and the panel cannot blur it. This is purely to evaluate the aesthetic. */
+  body{ overflow:auto; background:transparent; }
+  .fake-ae{
+    position:fixed; inset:0; z-index:0;
+    background:
+      repeating-linear-gradient(90deg, #1b1d22 0 2px, transparent 2px 90px),
+      repeating-linear-gradient(0deg,  #16181c 0 24px, #101216 24px 48px),
+      linear-gradient(135deg, #20242b, #0c0d10);
+  }
+  .stage{ position:relative; z-index:1; min-height:100%; display:flex; align-items:center; justify-content:center; padding:40px; }
+  .panel{
+    width:340px; padding:18px; display:flex; flex-direction:column; gap:14px;
+  }
+  .row{ display:flex; gap:10px; align-items:center; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  label.k{ font-size:var(--fs-label); color:var(--grey); letter-spacing:.04em; text-transform:uppercase; }
+  .menu-demo{ position:static; display:flex; }
+</style>
+</head>
+<body>
+  <!-- 'fake-ae' stands in for the After Effects UI behind the panel, purely so
+       you can judge the frost. NOTE: in the real CEP panel this content is NOT
+       blurrable — this preview is optimistic on purpose. -->
+  <div class="fake-ae"></div>
+
+  <div class="stage">
+    <div class="panel glass">
+      <div class="row">
+        <span class="cl-word">CLUTCH<i class="cl-dot"></i>SNAP</span>
+        <span class="spacer"></span>
+        <button class="icon">⚙</button>
+      </div>
+
+      <div class="field">
+        <label class="k">Source</label>
+        <input class="cl-input" placeholder="Search layers…">
+      </div>
+
+      <div class="row">
+        <button>Reset</button>
+        <button class="active">Snap</button>
+        <span class="spacer"></span>
+        <button class="cl-action"><span>RENDER</span></button>
+      </div>
+
+      <!-- real backdrop-filter blur: this menu frosts the panel content behind it -->
+      <div class="cl-menu menu-demo" style="position:static;">
+        <div class="cl-menu-head">Quick actions</div>
+        <button><span class="ci">⧉</span> Duplicate</button>
+        <button><span class="ci">↦</span> Send to back</button>
+        <div class="cl-menu-sep"></div>
+        <button class="danger"><span class="ci">✕</span> Delete</button>
+      </div>
+
+      <div class="cl-status good">Ready · 12 layers · frosted-glass variant</div>
+    </div>
+  </div>
+</body>
+</html>

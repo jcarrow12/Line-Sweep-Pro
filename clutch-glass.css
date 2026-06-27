@@ -1,0 +1,96 @@
+/* =============================================================================
+   clutch-glass.css — dark frosted-glass surface variant for Clutch panels
+   Load AFTER clutch.css:
+     <link rel="stylesheet" href="clutch.css">
+     <link rel="stylesheet" href="clutch-glass.css">
+
+   IMPORTANT — what "frosted glass" can and can't do in a CEP panel:
+   A docked AE panel renders into an opaque rectangle and has NO access to the
+   After Effects pixels behind it, so backdrop-filter CANNOT blur the timeline /
+   comp viewer beneath the panel. This file therefore does two things:
+     1) FAUX frost for the panel base — translucent fills over the carbon
+        backdrop + a faint light edge so surfaces read as dark glass.
+     2) REAL backdrop-filter blur for elements that float over YOUR OWN panel
+        content (context menu, status bar, overlays) — there it genuinely blurs.
+   ============================================================================= */
+
+:root{
+  /* translucent re-tints of the brand surfaces (same hues, now see-through) */
+  --panel-glass:   rgba(20, 22, 26, 0.62);   /* was --panel  #141619 */
+  --panel2-glass:  rgba(25, 28, 32, 0.66);   /* was --panel2 #191C20 */
+  --menu-glass:    rgba(22, 25, 29, 0.80);   /* floating menu — denser for legibility */
+  --glass-blur:    18px;
+  --glass-edge:    rgba(255,255,255,0.07);   /* top hairline highlight */
+  --glass-shadow:  0 10px 34px rgba(0,0,0,0.55);
+}
+
+/* Richer base so translucency has depth to sit on: carbon + a soft ember-tinted
+   radial bloom behind everything. Pair with <div class="backdrop"></div>. */
+.backdrop{
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(255,122,24,0.06), transparent 55%),
+    var(--carbon);
+  background-image:
+    radial-gradient(120% 90% at 50% -10%, rgba(255,122,24,0.06), transparent 55%),
+    radial-gradient(var(--line) 0.7px, transparent 0.7px);
+  background-size: auto, 24px 24px;
+}
+
+/* ---- generic glass surface helper: add class="glass" to any container ---- */
+.glass{
+  background: var(--panel-glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+  border: 1px solid var(--line);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-edge);
+  border-radius: 12px;
+}
+
+/* ---- re-skin existing components onto translucent surfaces ---- */
+
+/* raised controls */
+button{ background: var(--panel2-glass); }
+button:hover{ background: rgba(32,36,42,0.75); }
+.cl-action{ background: var(--panel2-glass); }
+
+/* inputs */
+.cl-input{ background: var(--panel-glass); }
+
+/* floating context menu — real frost: it sits over your panel's own content */
+.cl-menu{
+  background: var(--menu-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  backdrop-filter: blur(22px) saturate(1.2);
+  border-color: var(--glass-edge);
+  box-shadow:
+    0 16px 44px rgba(0,0,0,0.62),
+    inset 0 1px 0 var(--glass-edge);
+}
+
+/* status bar — translucent strip pinned over content; real blur applies */
+.cl-status{
+  background: var(--panel-glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border-top: 1px solid var(--glass-edge);
+}
+
+/* generic overlay/modal scrim that blurs the panel underneath it */
+.cl-overlay{
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(11,12,14,0.45);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* graceful fallback: if backdrop-filter is unsupported, go more opaque so
+   text never loses contrast against AE behind the panel */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+  :root{
+    --panel-glass:  rgba(20,22,26,0.94);
+    --panel2-glass: rgba(25,28,32,0.96);
+    --menu-glass:   rgba(22,25,29,0.97);
+  }
+}

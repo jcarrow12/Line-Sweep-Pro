@@ -1,0 +1,179 @@
+/* =============================================================================
+   clutch.css — shared Clutch brand foundation for CEP / web panels
+   Drop this into any Clutch tool, then add an app-specific stylesheet after it.
+   Contains: design tokens, base reset, typography, the wordmark lockup, the
+   friction-disc mark helpers, generic + primary buttons, form controls, the
+   floating context menu, status bar, and scrollbars.
+   App-specific layout (viewers, rails, etc.) does NOT belong here.
+   ----------------------------------------------------------------------------
+   Fonts: load Space Grotesk + Geist Mono in your HTML <head>, e.g.
+   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+   ============================================================================= */
+
+:root{
+  /* --- core palette (from the Clutch brand guide) --- */
+  --carbon:#0B0C0E;    /* base background */
+  --panel:#141619;     /* surface */
+  --panel2:#191C20;    /* raised surface / controls */
+  --line:#262A30;      /* hairline */
+  --line-2:#33383F;    /* stronger border */
+  --off:#E9ECEE;       /* Off-White — ink / text */
+  --grey:#868D95;      /* Steel — muted / meta */
+  --grey-d:#5A616A;    /* dim / disabled */
+  --ember:#FF7A18;     /* Ember — hero accent (use sparingly) */
+  --ember-dk:#d9650d;  /* pressed ember */
+
+  --radius:3px;
+  --radius-pill:999px;
+
+  --mono:'Geist Mono', ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --display:'Space Grotesk', system-ui, "Segoe UI", sans-serif;
+
+  /* --- readable type scale (concrete px; 13px floor for UI, never below) --- */
+  --fs-micro:11px;   /* tiny labels ONLY (badges) — never body copy */
+  --fs-label:13px;   /* secondary UI text, meta */
+  --fs-ui:14px;      /* buttons, controls */
+  --fs-body:15px;    /* primary text */
+  --fs-title:18px;   /* section / item titles */
+  --fs-word:22px;    /* wordmark */
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+html,body{
+  height:100%;
+  background:var(--carbon);
+  color:var(--off);
+  font-family:var(--mono);
+  font-size:var(--fs-ui);
+  line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+  -webkit-user-select:none; user-select:none;
+  overflow:hidden;
+}
+
+/* dot-grid texture; put <div class="backdrop"></div> as first child of your root */
+.backdrop{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:var(--carbon);
+  background-image:radial-gradient(var(--line) 0.7px, transparent 0.7px);
+  background-size:24px 24px;
+}
+
+/* utility */
+.muted{ color:var(--grey); }
+.spacer{ flex:1; }
+
+/* ---------- typography: wordmark lockup ---------- */
+/* Usage: <span class="cl-word">CLUTCH<i class="cl-dot"></i>SNAP</span> */
+.cl-word{
+  font-family:var(--display); font-weight:700; font-size:var(--fs-word);
+  line-height:1; letter-spacing:-0.01em; color:var(--off);
+  display:inline-flex; align-items:flex-end; white-space:nowrap;
+}
+.cl-dot{
+  width:0.24em; height:0.24em; border-radius:50%; flex:0 0 auto;
+  background:var(--ember); margin:0 0.13em 0.04em;   /* baseline-sitting period */
+  box-shadow:0 0 0.5em var(--ember);
+}
+
+/* ---------- generic buttons ---------- */
+button{
+  background:var(--panel2); color:var(--off);
+  border:1px solid var(--line-2); border-radius:var(--radius);
+  font-family:var(--mono); font-size:var(--fs-ui); font-weight:500;
+  letter-spacing:0.02em; padding:7px 13px; cursor:pointer;
+  transition:border-color .12s ease, background .12s ease;
+  line-height:1;
+}
+button:hover{ border-color:var(--grey-d); background:#20242a; }
+button:active{ background:var(--carbon); }
+button[disabled]{ opacity:.4; cursor:default; }
+button[disabled]:hover{ border-color:var(--line-2); background:var(--panel2); }
+button.icon{ padding:7px 10px; font-size:var(--fs-body); }
+
+/* toggle-active state for any button (e.g. a mode that's currently on) */
+button.active{ border-color:var(--ember); color:var(--ember); background:#1d1710; }
+
+/* ---------- primary action button (.cl-action) ---------- */
+/* Orange-on-dark at rest; fills ember with white label when pressed/busy.
+   Markup: <button class="cl-action"><svg class="cl-mark">…</svg><span>LABEL</span></button> */
+.cl-action{
+  display:inline-flex; align-items:center; gap:9px; flex:0 0 auto;
+  background:var(--panel2); color:var(--ember);
+  border:1px solid var(--ember); border-radius:var(--radius-pill);
+  padding:7px 9px 7px 8px; cursor:pointer;
+  font-family:var(--mono); font-weight:700; font-size:var(--fs-ui);
+  letter-spacing:0.16em; text-transform:uppercase;
+  transition:background .12s ease, border-color .12s ease, transform .06s ease;
+}
+.cl-action > span{ padding-right:11px; color:var(--grey); }   /* Steel label by default */
+.cl-action:hover{ background:#1d1710; }
+.cl-action:active,
+.cl-action.busy{ background:var(--ember); color:#fff; border-color:var(--ember); transform:translateY(1px); }
+.cl-action:active > span,
+.cl-action.busy > span{ color:#fff; }
+.cl-action:disabled{ opacity:.5; cursor:default; }
+.cl-action .cl-mark{
+  width:26px; height:26px; flex:0 0 auto;
+  background:rgba(255,122,24,0.12); border-radius:50%; padding:3px; color:currentColor;
+}
+.cl-action:active .cl-mark,
+.cl-action.busy .cl-mark{ background:rgba(255,255,255,0.18); }
+.cl-action.busy .cl-mark{ animation:cl-pulse .7s ease-in-out infinite; }
+@keyframes cl-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.5; } }
+
+/* ---------- form controls ---------- */
+.cl-input{
+  width:100%; background:var(--panel); color:var(--off);
+  border:1px solid var(--line-2); border-radius:var(--radius);
+  padding:9px 12px; font-family:var(--mono); font-size:var(--fs-ui);
+}
+.cl-input::placeholder{ color:var(--grey-d); }
+.cl-input:focus{ outline:none; border-color:var(--ember); }
+
+.cl-swatch[aria-pressed="true"]{ outline:2px solid var(--ember); outline-offset:2px; }
+.cl-color{
+  width:42px; height:34px; padding:0; border:1px solid var(--line-2);
+  border-radius:var(--radius); background:var(--panel2); cursor:pointer;
+}
+
+/* ---------- floating context menu (.cl-menu) ---------- */
+/* Place as a direct child of <body> (not inside a flex container) so it never
+   shifts your layout. Position via JS (position:fixed; set left/top). */
+.cl-menu{
+  position:fixed; z-index:9999; min-width:188px; left:0; top:0;
+  background:var(--panel2); border:1px solid var(--line-2); border-radius:6px;
+  padding:5px; box-shadow:0 16px 44px rgba(0,0,0,0.62), 0 0 0 1px rgba(0,0,0,0.4);
+  display:flex; flex-direction:column; gap:1px;
+}
+.cl-menu.hidden{ display:none; }
+.cl-menu .cl-menu-head{
+  font-size:var(--fs-label); color:var(--grey); letter-spacing:0.08em; text-transform:uppercase;
+  padding:7px 10px 8px; border-bottom:1px solid var(--line); margin-bottom:4px;
+}
+.cl-menu button{
+  display:flex; align-items:center; gap:10px;
+  text-align:left; background:transparent; border:none; border-radius:4px;
+  padding:9px 11px; font-size:var(--fs-ui); color:var(--off); cursor:pointer; width:100%;
+}
+.cl-menu button .ci{ width:16px; text-align:center; opacity:.8; font-size:13px; }
+.cl-menu button:hover{ background:var(--ember); color:var(--carbon); }
+.cl-menu button.danger{ color:#e88; }
+.cl-menu button.danger:hover{ background:#a33; color:var(--off); }
+.cl-menu .cl-menu-sep{ height:1px; background:var(--line); margin:4px 2px; }
+
+/* ---------- status bar ---------- */
+.cl-status{
+  flex:0 0 auto; padding:8px 14px; border-top:1px solid var(--line);
+  font-size:var(--fs-label); letter-spacing:0.02em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  color:var(--grey);
+}
+.cl-status.error{ color:#e88; }
+.cl-status.good{ color:var(--ember); }
+
+/* ---------- scrollbars ---------- */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background:var(--line-2); border-radius:5px; }
+::-webkit-scrollbar-track{ background:transparent; }
