@@ -68,13 +68,20 @@ python3 -m http.server 8080
 
 ## Deploy (for the iPhone install)
 
-Any static host works, since there's no backend. The easiest is **GitHub Pages**:
+Any static host works, since there's no backend. This repo is already wired for
+**GitHub Pages** via a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`)
+that redeploys on every push.
 
-1. Push this branch to GitHub.
-2. In the repo: **Settings → Pages → Build and deployment → Source: Deploy from a branch**, pick this branch, `/ (root)`.
-3. Your app will be live at `https://<user>.github.io/<repo>/` — open that on your iPhone and Add to Home Screen.
+**One-time setup** (turns the workflow on):
+1. In the repo on GitHub, go to **Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **GitHub Actions**.
+3. That's it. The next push (or a manual run from the **Actions** tab → *Deploy to GitHub Pages* → *Run workflow*) publishes the site.
 
-Other one-click options: **Netlify** or **Vercel** (drag-and-drop the folder / point at the repo).
+Your app goes live at **`https://<user>.github.io/Line-Sweep-Pro/`** — open that in
+Safari on your iPhone and **Add to Home Screen**. (All paths are relative, so the
+`/Line-Sweep-Pro/` subpath works out of the box.)
+
+Prefer no config? **Netlify** or **Vercel** also work with a drag-and-drop of the folder.
 
 ---
 
