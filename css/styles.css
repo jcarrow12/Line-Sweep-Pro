@@ -14,6 +14,13 @@
   --surface: #ffffff;
   --radius: 12px;
   --radius-sm: 8px;
+  /* Motion — the house style ("On Air"): one settle curve, three speeds.
+     Reference these (or Motion.EASE/DUR in js/motion.js) for anything that moves. */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);  /* decelerate into place */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* symmetric ease */
+  --motion-fast: 130ms;   /* taps, chips, hovers */
+  --motion: 190ms;        /* the default — reorders, panels, selection */
+  --motion-slow: 280ms;   /* larger surfaces */
   --shadow-sm: 0 1px 2px rgba(29, 37, 65, .06), 0 1px 3px rgba(29, 37, 65, .05);
   --shadow-md: 0 6px 20px rgba(29, 37, 65, .10);
   --shadow-lg: 0 18px 50px rgba(29, 37, 65, .22);
@@ -119,7 +126,7 @@ svg { display: block; }
 .group { margin-bottom: 26px; }
 .group__head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-left: 2px; }
 .group__caret { border: 0; background: transparent; color: var(--group, var(--blue)); padding: 2px; border-radius: 6px; transition: transform .2s; }
-.group__caret svg { width: 16px; height: 16px; transform: rotate(90deg); transition: transform .2s; }
+.group__caret svg { width: 16px; height: 16px; transform: rotate(90deg); transition: transform var(--motion) var(--ease-settle); }
 .group__caret.is-collapsed svg { transform: rotate(0deg); }
 .group__title { border: 0; background: transparent; font-size: 15px; font-weight: 800; letter-spacing: -.01em; padding: 2px 4px; border-radius: 6px; }
 .group__title:hover { background: var(--line-soft); }
@@ -257,9 +264,9 @@ svg { display: block; }
 .kcol__list { padding: 4px 10px 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 60px; border-radius: 10px; transition: background .18s, box-shadow .18s; }
 .kcol__list.is-over { background: rgba(0,115,234,.08); box-shadow: inset 0 0 0 2px rgba(0,115,234,.35); }
 
-.kcard { background: var(--surface); border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-sm); padding: 12px; border-left: 4px solid var(--pc); cursor: grab; transition: box-shadow .16s, transform .16s; }
-.kcard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-.kcard.is-dragging { opacity: .5; cursor: grabbing; transform: rotate(1.5deg) scale(1.02); box-shadow: var(--shadow-lg); }
+.kcard { background: var(--surface); border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-sm); padding: 12px; border-left: 4px solid var(--pc); cursor: grab; transition: box-shadow var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard); }
+.kcard:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.kcard.is-dragging { opacity: .6; cursor: grabbing; transform: scale(1.01); box-shadow: var(--shadow-lg); }
 .kcard__top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .ptag { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--pc); background: color-mix(in srgb, var(--pc) 14%, white); padding: 3px 8px; border-radius: 999px; }
 .kcard__title { border: 0; background: transparent; text-align: left; font-size: 14px; font-weight: 700; color: var(--ink); padding: 0; width: 100%; line-height: 1.3; }
@@ -328,7 +335,7 @@ svg { display: block; }
 .wlchart__row { display: grid; grid-template-columns: 120px 1fr 30px; align-items: center; gap: 10px; }
 .wlchart__name { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; }
 .wlchart__track { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--line-soft); }
-.wlchart__seg { width: 0; transition: width .7s cubic-bezier(.22,1.2,.36,1); }
+.wlchart__seg { width: 0; transition: width var(--motion-slow) var(--ease-settle); }
 .wlchart__total { font-size: 13px; font-weight: 800; text-align: right; color: var(--ink-soft); }
 .wlchart__legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
 .wlchart__legend-item { display: flex; align-items: center; gap: 6px; }
