@@ -464,21 +464,21 @@ svg { display: block; }
 
 /* ============================================================================
    NEUMORPHISM — full soft-UI theme (reference recipe)
-   Base #dde3ec with a 145deg gradient on raised faces; elevation from a paired
+   Base #e5e6ea with a 145deg gradient on raised faces; elevation from a paired
    white highlight (top-left) + cool shadow (bottom-right). Raised = panels,
    cards, buttons; inset = inputs, search, progress, kanban columns; pressed =
    active. Chrome is monochrome; status/priority use a muted accent set (store.js).
    Delete this block to revert.
    ========================================================================== */
 :root {
-  --nm-base: #dde3ec;
-  --nm-grad: linear-gradient(145deg, #e2e8f1 0%, #d8dee7 100%);
+  --nm-base: #e5e6ea;
+  --nm-grad: linear-gradient(145deg, #eceef1 0%, #e0e1e5 100%);
   --nm-text: #3c4858;
   --nm-text-soft: #7b8598;
   --nm-accent: #5f7fb2;
 
-  --bg: #dde3ec;
-  --surface: #dde3ec;
+  --bg: #e5e6ea;
+  --surface: #e5e6ea;
   --ink: #3c4858;
   --ink-soft: #7b8598;
   --blue: #5f7fb2;
