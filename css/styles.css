@@ -34,6 +34,10 @@ body {
 }
 button { font-family: inherit; cursor: pointer; }
 svg { display: block; }
+/* The [hidden] attribute must always win, even over component display rules
+   (e.g. .modal-host { display: flex }). Without this the hidden modal layer
+   stays as a full-screen overlay and swallows every click. */
+[hidden] { display: none !important; }
 
 /* ===== App shell ========================================================== */
 .app {
