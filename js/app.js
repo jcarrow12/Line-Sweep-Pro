@@ -182,11 +182,13 @@
 
   function progressBar(p) {
     var wrap = el('button', 'progress', { 'data-project': p.id, 'data-field': 'progress', title: p.progress + '% complete' });
+    var track = el('span', 'progress__track');
     var fill = el('span', 'progress__fill');
     var color = p.status === 'done' ? '#4e8d6e' : (S.projectHealth(p).level === 'overdue' ? '#b04e5b' : '#4f77ae');
     fill.style.background = color;
     fill.dataset.pct = '0';
-    wrap.appendChild(fill);
+    track.appendChild(fill);
+    wrap.appendChild(track);
     wrap.appendChild(el('span', 'progress__label', { text: p.progress + '%' }));
     requestAnimationFrame(function () { M.fill(fill, p.progress); });
     return wrap;

@@ -118,21 +118,18 @@
     },
 
     /* Animate a progress bar fill to a target percentage.
-       Uses transform: scaleX (GPU-composited, no per-frame layout) rather than
-       animating width — smooth even with many bars and heavy shadows. The fill
-       is full-width and scaled from the left; the track's overflow:hidden +
-       radius keeps the cap clean. */
+       Animate width (not scaleX) so the fill keeps its full pill radius at
+       every value — a scaled pill squishes its rounded caps at low percentages.
+       The % label lives beside the bar, so no text rides over the fill. */
     fill: function (el, pct) {
       if (!el) return;
       var target = Math.max(0, Math.min(100, pct));
-      var to = target / 100;
-      var from = parseFloat(el.dataset.scale || '0');
-      el.dataset.scale = String(to);
-      el.style.width = '100%';
-      el.style.transformOrigin = 'left center';
-      el.style.transform = 'scaleX(' + to + ')';
-      if (REDUCED) return;
-      el.animate([{ transform: 'scaleX(' + from + ')' }, { transform: 'scaleX(' + to + ')' }],
+      el.dataset.pct = String(target);
+      if (REDUCED) { el.style.width = target + '%'; return; }
+      var from = el.getBoundingClientRect().width;
+      el.style.width = target + '%';
+      var to = el.getBoundingClientRect().width;
+      el.animate([{ width: from + 'px' }, { width: to + 'px' }],
         { duration: DUR.slow, easing: SETTLE });
     },
 

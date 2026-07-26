@@ -190,9 +190,10 @@ svg { display: block; }
 .timeline-chip__due.is-late { background: rgba(226,68,92,.14); color: #e2445c; }
 .timeline-chip__due.is-soon { background: rgba(253,171,61,.18); color: #c77b17; }
 
-.progress { position: relative; border: 0; background: var(--line-soft); border-radius: 999px; height: 22px; width: 100%; overflow: hidden; }
+.progress { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; width: 100%; height: 22px; padding: 0; }
+.progress__track { position: relative; flex: 1; height: 18px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
 .progress__fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 999px; }
-.progress__label { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: var(--ink); mix-blend-mode: normal; display: block; line-height: 22px; text-align: center; }
+.progress__label { flex: none; min-width: 30px; font-size: 11px; font-weight: 700; color: var(--ink); text-align: right; }
 
 .ms-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); background: var(--line-soft); border-radius: 8px; padding: 5px 9px; min-width: 0; }
 .ms-chip__flag { width: 13px; height: 13px; color: var(--ink-soft); flex: none; }
@@ -560,7 +561,8 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .pill--priority:hover { background: var(--nm-base); background-image: var(--nm-grad); color: var(--pc); }
 
 /* ---- Progress: colour fill in a sunken well ---- */
-.progress { background: var(--nm-base); box-shadow: var(--nm-inset-sm); border-radius: 999px; }
+.progress { background: transparent; box-shadow: none; }
+.progress__track { background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
 .progress__label { color: var(--nm-text); }
 
 /* ---- Chips / avatars ---- */
