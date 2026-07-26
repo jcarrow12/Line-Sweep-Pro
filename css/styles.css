@@ -537,7 +537,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 /* ---- Board rows ---- */
 .row--header { background: transparent; }
 .row:not(.row--header):not(.row--add):hover { background: rgba(156,165,178,.12); }
-.row--add { width: 100%; }   /* <button> doesn't stretch by default → the right-edge gap */
+.row--add { width: 100%; border: 0; background: transparent; -webkit-appearance: none; appearance: none; }   /* full width + no native button border/chrome */
 .row--add:hover { background: rgba(156,165,178,.09); }
 .row--add:hover .cell { color: var(--nm-accent); }
 .cell__name, .cell__name:hover, .timeline-chip:hover, .group__title:hover { background: transparent; }
