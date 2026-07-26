@@ -487,10 +487,12 @@ svg { display: block; }
   --radius: 22px;
   --radius-sm: 14px;
 
-  --nm-raised: inset 1px 1px 1px rgba(255,255,255,.70), inset -1px -1px 1px rgba(156,165,178,.35), 12px 12px 30px rgba(156,165,178,.55), -12px -12px 30px rgba(251,252,253,.85);
-  --nm-raised-sm: inset 1px 1px 1px rgba(255,255,255,.70), inset -1px -1px 1px rgba(156,165,178,.35), 6px 6px 15px rgba(156,165,178,.48), -6px -6px 15px rgba(251,252,253,.85);
-  --nm-inset: inset 6px 6px 16px rgba(156,165,178,.62), inset -6px -6px 16px rgba(251,252,253,.85);
-  --nm-inset-sm: inset 3px 3px 8px rgba(156,165,178,.52), inset -3px -3px 8px rgba(251,252,253,.85);
+  /* Softened: lower offsets/blur and — the main lever — reduced highlight &
+     shadow opacity so the extrusion reads gently instead of shouting. */
+  --nm-raised: inset 1px 1px 1px rgba(255,255,255,.45), inset -1px -1px 1px rgba(156,165,178,.18), 9px 9px 20px rgba(156,165,178,.30), -9px -9px 20px rgba(251,252,253,.55);
+  --nm-raised-sm: inset 1px 1px 1px rgba(255,255,255,.45), inset -1px -1px 1px rgba(156,165,178,.18), 4px 4px 10px rgba(156,165,178,.26), -4px -4px 10px rgba(251,252,253,.52);
+  --nm-inset: inset 4px 4px 9px rgba(156,165,178,.34), inset -4px -4px 9px rgba(251,252,253,.55);
+  --nm-inset-sm: inset 2px 2px 5px rgba(156,165,178,.28), inset -2px -2px 5px rgba(251,252,253,.52);
   --shadow-sm: var(--nm-raised-sm);
   --shadow-md: var(--nm-raised);
   --shadow-lg: var(--nm-raised);

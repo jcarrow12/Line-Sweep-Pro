@@ -1,5 +1,5 @@
 /* Line Sweep Pro — offline cache (cache-first for app shell). */
-const CACHE = 'line-sweep-pro-v7';
+const CACHE = 'line-sweep-pro-v8';
 const ASSETS = [
   './',
   './index.html',
