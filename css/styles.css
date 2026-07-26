@@ -659,3 +659,11 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .tabbar__btn { color: var(--nm-text-soft); }
 .tabbar__btn.is-active { color: var(--nm-accent); }
 .tabbar__btn--fab { color: var(--nm-accent); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised); }
+
+/* ---- Remove leftover Monday-blue tint boxes (neutralise to the palette) ---- */
+.ms-editor__add { color: var(--nm-accent); border: 1px dashed var(--line-soft); background: transparent; }
+.ms-editor__add:hover { background: rgba(156,165,178,.12); border-color: var(--nm-text-soft); }
+.kcol__list.is-over { background: rgba(156,165,178,.14); box-shadow: inset 0 0 0 2px rgba(156,165,178,.5); }
+.pcard__cap-level--high { background: rgba(176,78,91,.16); color: #b04e5b; }
+.pcard__cap-level--balanced { background: rgba(156,165,178,.16); color: var(--nm-text-soft); }
+.pcard__cap-level--free { background: rgba(156,165,178,.12); color: var(--nm-text-soft); }
