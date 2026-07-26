@@ -373,6 +373,7 @@
       else if (d <= 3) chip.classList.add('is-soon');
       chip.appendChild(el('span', 'ms-chip__flag', { html: flagSVG() }));
       chip.appendChild(el('span', 'ms-chip__name', { text: nm.name }));
+      if (nm.assigneeId) { var mw = S.personById(nm.assigneeId); if (mw) chip.appendChild(avatar(mw, 18)); }
       chip.appendChild(el('span', 'ms-chip__date', { text: fmtDate(nm.date) }));
       msCell.appendChild(chip);
     } else {
@@ -467,10 +468,13 @@
       track.appendChild(bar);
       barEls.push(bar);
 
-      // milestone diamonds
+      // milestone diamonds (tinted by the person who owns the milestone)
       (p.milestones || []).forEach(function (m) {
         var mx = S.daysBetween(min, m.date) * DAY_W;
-        var dia = el('span', 'gdia' + (m.done ? ' is-done' : ''), { title: m.name + ' · ' + fmtDateFull(m.date) });
+        var who = m.assigneeId ? S.personById(m.assigneeId) : null;
+        var tip = m.name + ' · ' + fmtDateFull(m.date) + (who ? ' · ' + who.name : '');
+        var dia = el('span', 'gdia' + (m.done ? ' is-done' : ''), { title: tip });
+        if (who && !m.done) { dia.style.background = who.color; dia.style.borderColor = who.color; }
         dia.style.left = (mx - 6) + 'px';
         track.appendChild(dia);
       });
@@ -973,26 +977,58 @@
     msField.appendChild(el('label', 'field__label', { text: 'Milestones' }));
     var msList = el('div', 'ms-editor');
     msField.appendChild(msList);
+    var dragFrom = null;
     function renderMsEditor() {
       clear(msList);
-      p.milestones.sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (m) {
+      // Manual order is preserved (no auto date-sort) so drag-to-reorder sticks.
+      p.milestones.forEach(function (m, idx) {
         var rowm = el('div', 'ms-editor__row');
+
+        var handle = el('span', 'ms-editor__handle', { html: gripSVG(), title: 'Drag to reorder', draggable: 'true' });
+        handle.addEventListener('dragstart', function (e) {
+          dragFrom = idx; e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/plain', String(idx)); } catch (err) {}
+          rowm.classList.add('is-dragging');
+        });
+        handle.addEventListener('dragend', function () { dragFrom = null; rowm.classList.remove('is-dragging'); });
+        rowm.addEventListener('dragover', function (e) { e.preventDefault(); rowm.classList.add('is-drop'); });
+        rowm.addEventListener('dragleave', function () { rowm.classList.remove('is-drop'); });
+        rowm.addEventListener('drop', function (e) {
+          e.preventDefault(); rowm.classList.remove('is-drop');
+          if (dragFrom === null || dragFrom === idx) return;
+          var moved = p.milestones.splice(dragFrom, 1)[0];
+          p.milestones.splice(idx, 0, moved);
+          renderMsEditor();
+        });
+
         var chk = el('input', 'ms-editor__chk', { type: 'checkbox' });
         chk.checked = m.done;
         chk.addEventListener('change', function () { m.done = chk.checked; });
-        var name = el('input', 'input input--sm', { type: 'text', value: m.name });
+        var name = el('input', 'input input--sm', { type: 'text', value: m.name, placeholder: 'Milestone' });
         name.addEventListener('input', function () { m.name = name.value; });
         var date = el('input', 'input input--sm input--date', { type: 'date', value: m.date });
         date.addEventListener('input', function () { m.date = date.value; });
+
+        // Who owns this milestone: "Everyone" (project-level) or one assignee.
+        var who = el('select', 'input input--sm ms-editor__who', { title: 'Assign this milestone' });
+        who.appendChild(el('option', null, { value: '', text: 'Everyone' }));
+        assigneeIds.forEach(function (pid) {
+          var per = S.personById(pid);
+          if (per) who.appendChild(el('option', null, { value: pid, text: per.name.split(' ')[0] }));
+        });
+        who.value = m.assigneeId || '';
+        who.addEventListener('change', function () { m.assigneeId = who.value || null; });
+
         var del = el('button', 'ms-editor__del', { html: '&times;', onclick: function () {
           p.milestones = p.milestones.filter(function (x) { return x.id !== m.id; });
           renderMsEditor();
         } });
-        rowm.appendChild(chk); rowm.appendChild(name); rowm.appendChild(date); rowm.appendChild(del);
+        rowm.appendChild(handle); rowm.appendChild(chk); rowm.appendChild(name);
+        rowm.appendChild(date); rowm.appendChild(who); rowm.appendChild(del);
         msList.appendChild(rowm);
       });
       var add = el('button', 'ms-editor__add', { text: '+ Add milestone', onclick: function () {
-        p.milestones.push({ id: 'ms_' + Math.random().toString(36).slice(2, 8), name: '', date: dueInput.value || S.todayISO(), done: false });
+        p.milestones.push({ id: 'ms_' + Math.random().toString(36).slice(2, 8), name: '', date: dueInput.value || S.todayISO(), done: false, assigneeId: null });
         renderMsEditor();
       } });
       msList.appendChild(add);
@@ -1161,6 +1197,7 @@
   // ---- Inline SVG icons -----------------------------------------------------
   function caretSVG() { return '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function checkSVG() { return '<svg viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+  function gripSVG() { return '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>'; }
   function flagSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3v18M6 4h11l-2 4 2 4H6" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
