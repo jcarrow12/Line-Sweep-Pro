@@ -498,6 +498,9 @@ svg { display: block; }
 :root {
   --nm-base: #e5e6ea;
   --nm-grad: linear-gradient(145deg, #eceef1 0%, #e0e1e5 100%);
+  /* Tune motion.css's drag-lift to the neumorphic palette. */
+  --motion-lift-bg: #e5e6ea;
+  --motion-lift-shadow: 0 10px 26px rgba(60,72,110,.20);
   --nm-text: #3c4858;
   --nm-text-soft: #7b8598;
   --nm-accent: #4f77ae;

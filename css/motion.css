@@ -1,0 +1,203 @@
+/* =============================================================================
+   motion.css — a small, portable "house motion" system
+   -----------------------------------------------------------------------------
+   One settle curve, three speeds, a handful of enter/exit keyframes, and a few
+   interaction patterns (lift, press, reorder, theme crossfade). Framework-
+   agnostic, dependency-free, and reduced-motion aware.
+
+   Extracted and generalized from the Rundown house motion style.
+
+   USAGE
+     <link rel="stylesheet" href="motion.css" />
+
+     <!-- animate on mount -->
+     <div class="m-pop-in"> … </div>
+
+     <!-- transition tokens on your own rules -->
+     .btn { transition: background var(--motion-fast) var(--ease-standard); }
+
+   PHILOSOPHY
+     - Reference the tokens, don't hand-pick durations/curves per element.
+     - --ease-settle is the signature: things decelerate into place.
+     - Keep motion short. 130/190/280ms covers almost everything.
+   ============================================================================= */
+
+:root {
+  /* ---- Easing --------------------------------------------------------- */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);   /* THE house curve — decelerate into place */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);   /* symmetric ease — general transitions */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);          /* decelerate — enters */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);           /* accelerate — exits */
+
+  /* ---- Durations ------------------------------------------------------ */
+  --motion-fast: 130ms;  /* taps, chips, hovers */
+  --motion: 190ms;       /* the default — reorders, panels, selection */
+  --motion-slow: 280ms;  /* larger surfaces, theme crossfade */
+
+  /* ---- Tunable knobs for the patterns below --------------------------- */
+  --motion-travel: 8px;                              /* how far slide/pop enters move */
+  --motion-lift-bg: #ffffff;                         /* dragged-item background */
+  --motion-lift-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+/* =============================================================================
+   Keyframes
+   ============================================================================= */
+@keyframes m-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes m-pop-in {
+  from { opacity: 0; transform: scale(0.96) translateY(var(--motion-travel)); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes m-pop-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: scale(0.96) translateY(var(--motion-travel)); }
+}
+
+@keyframes m-slide-up-in {
+  from { opacity: 0; transform: translateY(var(--motion-travel)); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes m-slide-down-in {
+  from { opacity: 0; transform: translateY(calc(-1 * var(--motion-travel))); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes m-slide-left-in {
+  from { opacity: 0; transform: translateX(var(--motion-travel)); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes m-slide-right-in {
+  from { opacity: 0; transform: translateX(calc(-1 * var(--motion-travel))); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes m-spin  { to { transform: rotate(360deg); } }
+@keyframes m-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes m-shimmer { from { background-position: -150% 0; } to { background-position: 150% 0; } }
+
+/* =============================================================================
+   Enter / exit utilities — add a class to animate. `both` holds the end frame.
+   ============================================================================= */
+.m-fade-in    { animation: m-fade-in var(--motion) var(--ease-out) both; }
+.m-fade-out   { animation: m-fade-out var(--motion-fast) var(--ease-in) both; }
+.m-pop-in     { animation: m-pop-in var(--motion) var(--ease-settle) both; }
+.m-pop-out    { animation: m-pop-out var(--motion-fast) var(--ease-in) both; }
+.m-slide-up   { animation: m-slide-up-in var(--motion) var(--ease-settle) both; }
+.m-slide-down { animation: m-slide-down-in var(--motion) var(--ease-settle) both; }
+.m-slide-left { animation: m-slide-left-in var(--motion) var(--ease-settle) both; }
+.m-slide-right{ animation: m-slide-right-in var(--motion) var(--ease-settle) both; }
+
+/* Stagger children: set --m-i (index) on each, or use nth-child in your own CSS. */
+.m-stagger > * { animation: m-pop-in var(--motion) var(--ease-settle) both; }
+.m-stagger > *  { animation-delay: calc(var(--m-i, 0) * 40ms); }
+
+/* Looping helpers */
+.m-spin  { animation: m-spin 0.9s linear infinite; }
+.m-pulse { animation: m-pulse 0.9s ease-in-out infinite; }
+
+/* Skeleton shimmer — pair with a gradient background sized 200% wide. */
+.m-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 25%,
+    rgba(0, 0, 0, 0.09) 37%,
+    rgba(0, 0, 0, 0.04) 63%
+  );
+  background-size: 200% 100%;
+  animation: m-shimmer 1.4s ease-in-out infinite;
+}
+
+/* =============================================================================
+   Accordion / expand
+   Height can't be transitioned to `auto`, so use the grid-rows 0fr→1fr trick.
+   Requires a SINGLE direct child wrapping the collapsible content:
+
+     <div class="m-collapse" data-open>
+       <div>…content…</div>
+     </div>
+
+   Toggle by adding / removing the `data-open` attribute (or `.is-open`).
+   ============================================================================= */
+.m-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--motion) var(--ease-settle);
+}
+.m-collapse[data-open],
+.m-collapse.is-open {
+  grid-template-rows: 1fr;
+}
+.m-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* =============================================================================
+   Interaction patterns
+   ============================================================================= */
+
+/* General hover/appearance transitions for interactive elements. */
+.m-interactive {
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+/* Tactile tap feedback. */
+.m-press { transition: transform var(--motion-fast) var(--ease-standard); }
+.m-press:active { transform: scale(0.97); }
+
+/* Drag "lift" — apply to an item while it is being dragged / reordered. */
+.m-lift {
+  position: relative;
+  z-index: 3;
+  background: var(--motion-lift-bg);
+  box-shadow: var(--motion-lift-shadow);
+  cursor: grabbing;
+}
+
+/* Reorder glide — elements that should ease to a new position on layout change.
+   Works on its own for transform-driven moves; for full list reordering pair it
+   with a FLIP helper in JS (measure → set transform → clear on next frame). */
+.m-reorder { transition: transform var(--motion) var(--ease-settle); }
+
+/* =============================================================================
+   Theme / color crossfade
+   Add `.theme-animating` to the root element ONLY during a light/dark switch,
+   then remove it after ~--motion-slow so ordinary interactions stay instant:
+
+     root.classList.add('theme-animating');
+     // flip your theme tokens…
+     setTimeout(() => root.classList.remove('theme-animating'), 300);
+   ============================================================================= */
+.theme-animating,
+.theme-animating *,
+.theme-animating *::before,
+.theme-animating *::after {
+  transition:
+    background-color var(--motion-slow) var(--ease-standard),
+    border-color var(--motion-slow) var(--ease-standard),
+    color var(--motion-slow) var(--ease-standard),
+    fill var(--motion-slow) var(--ease-standard) !important;
+}
+
+/* =============================================================================
+   Reduced motion — honor the OS setting. Near-instant transitions/animations
+   while still letting state changes land (0.001ms keeps JS animationend/
+   transitionend events firing).
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .m-collapse { transition: none; }
+}

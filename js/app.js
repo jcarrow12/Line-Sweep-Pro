@@ -978,11 +978,31 @@
     var msList = el('div', 'ms-editor');
     msField.appendChild(msList);
     var dragFrom = null;
+
+    // FLIP: capture each row's position by milestone id, rebuild, then glide
+    // every row from its old spot to the new one on the house settle curve.
+    function flipMs(mutate) {
+      var first = {};
+      Array.prototype.forEach.call(msList.querySelectorAll('.ms-editor__row'), function (el) {
+        first[el.getAttribute('data-msid')] = el.getBoundingClientRect().top;
+      });
+      mutate();
+      if (M.reduced) return;
+      Array.prototype.forEach.call(msList.querySelectorAll('.ms-editor__row'), function (el) {
+        var a = first[el.getAttribute('data-msid')];
+        if (a == null) return;
+        var dy = a - el.getBoundingClientRect().top;
+        if (Math.abs(dy) < 0.5) return;
+        el.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }],
+          { duration: 190, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+      });
+    }
+
     function renderMsEditor() {
       clear(msList);
       // Manual order is preserved (no auto date-sort) so drag-to-reorder sticks.
       p.milestones.forEach(function (m, idx) {
-        var rowm = el('div', 'ms-editor__row');
+        var rowm = el('div', 'ms-editor__row', { 'data-msid': m.id });
 
         var handle = el('span', 'ms-editor__handle', { html: gripSVG(), title: 'Drag to reorder', draggable: 'true' });
         handle.addEventListener('dragstart', function (e) {
@@ -991,14 +1011,16 @@
           rowm.classList.add('is-dragging');
         });
         handle.addEventListener('dragend', function () { dragFrom = null; rowm.classList.remove('is-dragging'); });
-        rowm.addEventListener('dragover', function (e) { e.preventDefault(); rowm.classList.add('is-drop'); });
-        rowm.addEventListener('dragleave', function () { rowm.classList.remove('is-drop'); });
+        rowm.addEventListener('dragover', function (e) { e.preventDefault(); });
         rowm.addEventListener('drop', function (e) {
-          e.preventDefault(); rowm.classList.remove('is-drop');
+          e.preventDefault();
           if (dragFrom === null || dragFrom === idx) return;
-          var moved = p.milestones.splice(dragFrom, 1)[0];
-          p.milestones.splice(idx, 0, moved);
-          renderMsEditor();
+          // FLIP glide (Rundown feel): rows ease from old to new position on the settle curve.
+          flipMs(function () {
+            var moved = p.milestones.splice(dragFrom, 1)[0];
+            p.milestones.splice(idx, 0, moved);
+            renderMsEditor();
+          });
         });
 
         var chk = el('input', 'ms-editor__chk', { type: 'checkbox' });
