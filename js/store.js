@@ -7,22 +7,22 @@
   // ---- Reference data -------------------------------------------------------
 
   var STATUSES = [
-    { id: 'not_started', label: 'Not started', color: '#9aa3b4' },
-    { id: 'working',     label: 'Working on it', color: '#c1934f' },
-    { id: 'stuck',       label: 'Stuck',        color: '#bf6b78' },
-    { id: 'on_hold',     label: 'On hold',      color: '#8f84b6' },
-    { id: 'done',        label: 'Done',         color: '#6f9e86' }
+    { id: 'not_started', label: 'Not started', color: '#868fa1' },
+    { id: 'working',     label: 'Working on it', color: '#b58234' },
+    { id: 'stuck',       label: 'Stuck',        color: '#b04e5b' },
+    { id: 'on_hold',     label: 'On hold',      color: '#7660a6' },
+    { id: 'done',        label: 'Done',         color: '#4e8d6e' }
   ];
 
   var PRIORITIES = [
-    { id: 'low',      label: 'Low',      color: '#7f93c0' },
-    { id: 'medium',   label: 'Medium',   color: '#6f79b8' },
-    { id: 'high',     label: 'High',     color: '#bf6b78' },
-    { id: 'critical', label: 'Critical', color: '#556074' }
+    { id: 'low',      label: 'Low',      color: '#6b88c0' },
+    { id: 'medium',   label: 'Medium',   color: '#5a63ad' },
+    { id: 'high',     label: 'High',     color: '#b04e5b' },
+    { id: 'critical', label: 'Critical', color: '#454e63' }
   ];
 
-  var AVATAR_COLORS = ['#6d8bba', '#6f9e86', '#8f84b6', '#bf6b78', '#c1934f',
-    '#5f9e8f', '#c07a5a', '#8b78b8', '#6fa0b8', '#b06b86', '#8a8674'];
+  var AVATAR_COLORS = ['#4f77ae', '#4e8d6e', '#7660a6', '#b04e5b', '#b58234',
+    '#3f8f7e', '#b0623f', '#7159a3', '#4d86a8', '#a04e6e', '#7a6f52'];
 
   // ---- Utilities ------------------------------------------------------------
 
@@ -75,9 +75,9 @@
     }
 
     var groups = [
-      { id: uid('grp'), name: 'In Production', color: '#6d8bba', collapsed: false },
-      { id: uid('grp'), name: 'Upcoming', color: '#8f84b6', collapsed: false },
-      { id: uid('grp'), name: 'Completed', color: '#6f9e86', collapsed: false }
+      { id: uid('grp'), name: 'In Production', color: '#4f77ae', collapsed: false },
+      { id: uid('grp'), name: 'Upcoming', color: '#7660a6', collapsed: false },
+      { id: uid('grp'), name: 'Completed', color: '#4e8d6e', collapsed: false }
     ];
 
     function proj(o) {
