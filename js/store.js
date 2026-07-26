@@ -86,6 +86,7 @@
         name: o.name,
         groupId: o.groupId,
         ownerId: o.ownerId,
+        assigneeIds: o.assigneeIds || [o.ownerId],
         status: o.status,
         priority: o.priority,
         startDate: o.start,
@@ -101,6 +102,7 @@
 
     var projects = [
       proj({ name: 'Opening Night Graphics Package', groupId: g0, ownerId: people[0].id,
+        assigneeIds: [people[0].id, people[4].id, people[1].id],
         status: 'working', priority: 'high', start: addDays(t, -12), due: addDays(t, 8), progress: 65,
         notes: 'Full lower-thirds + intro sting refresh for season opener.',
         milestones: [ms('Design approved', -6, true), ms('Animation pass', 2), ms('Final render + QC', 7)] }),
@@ -111,6 +113,7 @@
         milestones: [ms('Script locked', -5, true), ms('Rough cut', -2, true), ms('Music cleared', -1), ms('Delivery', 1)] }),
 
       proj({ name: 'Studio Set LED Refresh', groupId: g0, ownerId: people[2].id,
+        assigneeIds: [people[2].id, people[4].id],
         status: 'working', priority: 'medium', start: addDays(t, -20), due: addDays(t, 21), progress: 45,
         notes: 'New wall content + calibration for the A-camera set.',
         milestones: [ms('Vendor selected', -14, true), ms('Content templates', 5), ms('Install + calibrate', 18)] }),
@@ -172,6 +175,13 @@
             person.color = AVATAR_COLORS[i % AVATAR_COLORS.length];
           });
         }
+        // Migrate single-owner projects to the multi-assignee model.
+        if (saved && saved.projects) {
+          saved.projects.forEach(function (p) {
+            if (!p.assigneeIds || !p.assigneeIds.length) p.assigneeIds = [p.ownerId];
+            if (p.assigneeIds.indexOf(p.ownerId) === -1) p.ownerId = p.assigneeIds[0];
+          });
+        }
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -230,7 +240,9 @@
   }
 
   function workloadFor(personId) {
-    var mine = state.projects.filter(function (p) { return p.ownerId === personId; });
+    var mine = state.projects.filter(function (p) {
+      return (p.assigneeIds || [p.ownerId]).indexOf(personId) !== -1;
+    });
     var active = mine.filter(function (p) { return p.status !== 'done'; });
     var overdue = mine.filter(function (p) { return projectHealth(p).level === 'overdue'; });
     var avg = active.length ? Math.round(active.reduce(function (s, p) { return s + p.progress; }, 0) / active.length) : 0;
@@ -293,11 +305,15 @@
 
     addProject: function (data) {
       var t = todayISO();
+      var ids = (data.assigneeIds && data.assigneeIds.length)
+        ? data.assigneeIds
+        : [data.ownerId || (state.people[0] && state.people[0].id)];
       var p = {
         id: uid('prj'),
         name: data.name || 'Untitled project',
         groupId: data.groupId || state.groups[0].id,
-        ownerId: data.ownerId || (state.people[0] && state.people[0].id),
+        ownerId: ids[0],
+        assigneeIds: ids,
         status: data.status || 'not_started',
         priority: data.priority || 'medium',
         startDate: data.startDate || t,
@@ -316,6 +332,11 @@
       var p = projectById(id);
       if (!p) return;
       Object.keys(patch).forEach(function (k) { p[k] = patch[k]; });
+      // Keep owner (the lead) as the first assignee.
+      if (patch.assigneeIds) {
+        if (!p.assigneeIds.length) p.assigneeIds = [p.ownerId];
+        p.ownerId = p.assigneeIds[0];
+      }
       if (p.status === 'done') p.progress = 100;
       emit(Object.assign({ type: 'update', id: id }, meta || {}));
       return p;

@@ -142,7 +142,7 @@ svg { display: block; }
 
 .row {
   display: grid;
-  grid-template-columns: minmax(200px, 2.2fr) 64px 150px 190px 110px 150px minmax(160px, 1.4fr);
+  grid-template-columns: minmax(200px, 2.2fr) 92px 150px 190px 110px 150px minmax(160px, 1.4fr);
   align-items: center; border-bottom: 1px solid var(--line-soft); min-height: 52px;
 }
 .row:last-child { border-bottom: 0; }
@@ -170,8 +170,10 @@ svg { display: block; }
   box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.18);
 }
 .avatar--empty { background: #eceef3; box-shadow: inset 0 0 0 2px #dfe2ea; color: #b0b4c2; }
-.owner-btn { border: 0; background: transparent; padding: 0; border-radius: 50%; transition: transform .16s; }
-.owner-btn:hover { transform: scale(1.08); }
+.owner-btn { border: 0; background: transparent; padding: 0; border-radius: 999px; transition: transform .16s; }
+.owner-btn:hover { transform: translateY(-1px); }
+.avatar-stack { display: inline-flex; align-items: center; }
+.avatar--more { display: inline-flex; align-items: center; justify-content: center; width: var(--sz, 28px); height: var(--sz, 28px); border-radius: 50%; font-size: calc(var(--sz, 28px) * .34); font-weight: 700; background: var(--line-soft); color: var(--ink-soft); box-shadow: 0 0 0 2px var(--surface); }
 
 .pill {
   border: 0; color: #fff; font-size: 12.5px; font-weight: 600; border-radius: 6px;
@@ -224,6 +226,15 @@ svg { display: block; }
 .people-opt:hover { background: var(--line-soft); }
 .people-opt__name { font-size: 13.5px; font-weight: 500; }
 .people-opt__role { font-size: 11px; color: var(--ink-soft); }
+.people-opt__check { width: 18px; height: 18px; color: var(--blue); flex: none; margin-left: auto; }
+.people-opt__check svg { width: 18px; height: 18px; }
+.people-opt.is-on { background: rgba(95,127,178,.12); }
+
+/* Editor people picker (multi-select chips) */
+.people-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.people-pick__chip { display: inline-flex; align-items: center; gap: 7px; border: 0; background: var(--surface); border-radius: 999px; padding: 5px 12px 5px 5px; font-size: 13px; font-weight: 500; color: var(--ink); box-shadow: var(--shadow-sm); opacity: .62; transition: opacity .16s, transform .16s; }
+.people-pick__chip:hover { transform: translateY(-1px); }
+.people-pick__chip.is-on { opacity: 1; box-shadow: var(--shadow-sm), 0 0 0 2px var(--blue); }
 .popover--progress { min-width: 220px; padding: 14px; }
 .popover__label { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
 .popover--menu { min-width: 210px; }

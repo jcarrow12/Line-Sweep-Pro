@@ -55,6 +55,28 @@
     return a;
   }
 
+  // Overlapping avatars for a project's assignees (lead first), + "N" overflow.
+  function avatarStack(ids, size) {
+    size = size || 28;
+    var wrap = el('span', 'avatar-stack');
+    var people = (ids || []).map(function (id) { return S.personById(id); }).filter(Boolean);
+    if (!people.length) { wrap.appendChild(avatar(null, size)); return wrap; }
+    var overlap = Math.round(size * 0.4);
+    people.slice(0, 3).forEach(function (person, i) {
+      var a = avatar(person, size);
+      if (i > 0) a.style.marginLeft = '-' + overlap + 'px';
+      a.style.zIndex = String(10 - i);
+      wrap.appendChild(a);
+    });
+    if (people.length > 3) {
+      var more = el('span', 'avatar avatar--more', { text: '+' + (people.length - 3), title: people.slice(3).map(function (p) { return p.name; }).join(', ') });
+      more.style.setProperty('--sz', size + 'px');
+      more.style.marginLeft = '-' + overlap + 'px';
+      wrap.appendChild(more);
+    }
+    return wrap;
+  }
+
   function statusPill(p) {
     var meta = S.statusMeta(p.status);
     var pill = el('button', 'pill pill--status', { 'data-project': p.id, 'data-field': 'status', text: meta.label });
@@ -145,18 +167,31 @@
     });
   }
 
-  function openOwnerMenu(anchor, project) {
+  // Multi-select: toggle people on/off a project; the first stays the lead.
+  function openAssigneeMenu(anchor, project) {
     openPopover(anchor, function (pop) {
       pop.classList.add('popover--people');
+      pop.appendChild(el('div', 'popover__label', { text: 'Assigned people' }));
       S.state.people.forEach(function (person) {
         var opt = el('button', 'people-opt');
+        var check = el('span', 'people-opt__check');
         opt.appendChild(avatar(person, 26));
         opt.appendChild(el('span', 'people-opt__name', { text: person.name }));
-        opt.appendChild(el('span', 'people-opt__role', { text: person.role }));
+        opt.appendChild(check);
+        function sync() {
+          var on = (project.assigneeIds || []).indexOf(person.id) !== -1;
+          opt.classList.toggle('is-on', on);
+          check.innerHTML = on ? checkSVG() : '';
+        }
         opt.addEventListener('click', function () {
-          S.updateProject(project.id, { ownerId: person.id }, { field: 'owner' });
-          closePopover();
+          var ids = (project.assigneeIds || []).slice();
+          var idx = ids.indexOf(person.id);
+          if (idx === -1) ids.push(person.id);
+          else if (ids.length > 1) ids.splice(idx, 1); // always keep at least one
+          S.updateProject(project.id, { assigneeIds: ids }, { field: 'owner' });
+          sync();
         });
+        sync();
         pop.appendChild(opt);
       });
     });
@@ -283,11 +318,11 @@
     nameCell.appendChild(nameBtn);
     row.appendChild(nameCell);
 
-    // owner
+    // owner(s)
     var ownerCell = el('div', 'cell cell--owner');
     var ownerBtn = el('button', 'owner-btn');
-    ownerBtn.appendChild(avatar(owner, 30));
-    ownerBtn.addEventListener('click', function (e) { e.stopPropagation(); openOwnerMenu(ownerBtn, p); });
+    ownerBtn.appendChild(avatarStack(p.assigneeIds, 28));
+    ownerBtn.addEventListener('click', function (e) { e.stopPropagation(); openAssigneeMenu(ownerBtn, p); });
     ownerCell.appendChild(ownerBtn);
     row.appendChild(ownerCell);
 
@@ -414,7 +449,7 @@
       var owner = S.personById(p.ownerId);
       var r = el('div', 'timeline__row');
       var label = el('button', 'timeline__label', { onclick: function () { openEditor(p.id); } });
-      label.appendChild(avatar(owner, 24));
+      label.appendChild(avatarStack(p.assigneeIds, 24));
       label.appendChild(el('span', 'timeline__label-text', { text: p.name }));
       r.appendChild(label);
 
@@ -531,7 +566,7 @@
     card.appendChild(title);
 
     var meta = el('div', 'kcard__meta');
-    meta.appendChild(avatar(owner, 26));
+    meta.appendChild(avatarStack(p.assigneeIds, 26));
     var due = el('span', 'kcard__due', { text: fmtDate(p.dueDate) });
     var dd = S.daysBetween(S.todayISO(), p.dueDate);
     if (p.status !== 'done') { if (dd < 0) due.classList.add('is-late'); else if (dd <= 3) due.classList.add('is-soon'); }
@@ -876,12 +911,33 @@
     // Name
     var nameInput = field(form, 'Project name', el('input', 'input', { type: 'text', value: p.name, placeholder: 'e.g. Opening Night Graphics' }));
 
-    // Owner + Group
+    // Assigned people (multi-select) — the first picked is the lead/owner.
+    var assigneeIds = (p.assigneeIds || (p.ownerId ? [p.ownerId] : [])).slice();
+    var pickField = el('div', 'field');
+    pickField.appendChild(el('label', 'field__label', { text: 'Assigned to (first is lead)' }));
+    var peoplePick = el('div', 'people-pick');
+    S.state.people.forEach(function (person) {
+      var chip = el('button', 'people-pick__chip', { type: 'button' });
+      chip.appendChild(avatar(person, 22));
+      chip.appendChild(el('span', null, { text: person.name.split(' ')[0] }));
+      function sync() { chip.classList.toggle('is-on', assigneeIds.indexOf(person.id) !== -1); }
+      chip.addEventListener('click', function () {
+        var idx = assigneeIds.indexOf(person.id);
+        if (idx === -1) assigneeIds.push(person.id);
+        else if (assigneeIds.length > 1) assigneeIds.splice(idx, 1);
+        sync();
+      });
+      sync();
+      peoplePick.appendChild(chip);
+    });
+    pickField.appendChild(peoplePick);
+    form.appendChild(pickField);
+
+    // Group
     var grid2 = el('div', 'form-grid');
-    var ownerSel = selectFrom(S.state.people.map(function (pe) { return { value: pe.id, label: pe.name + ' — ' + pe.role }; }), p.ownerId);
     var groupSel = selectFrom(S.state.groups.map(function (g) { return { value: g.id, label: g.name }; }), p.groupId);
-    grid2.appendChild(labeled('Owner', ownerSel));
     grid2.appendChild(labeled('Group', groupSel));
+    grid2.appendChild(el('div', 'field'));
     form.appendChild(grid2);
 
     // Status + Priority
@@ -973,7 +1029,8 @@
     function save() {
       var data = {
         name: nameInput.value.trim() || 'Untitled project',
-        groupId: groupSel.value, ownerId: ownerSel.value,
+        groupId: groupSel.value,
+        assigneeIds: assigneeIds.length ? assigneeIds : [S.state.people[0] && S.state.people[0].id],
         status: statusSel.value, priority: prioSel.value,
         startDate: startInput.value, dueDate: dueInput.value,
         progress: parseInt(progInput.value, 10),
@@ -1103,6 +1160,7 @@
 
   // ---- Inline SVG icons -----------------------------------------------------
   function caretSVG() { return '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+  function checkSVG() { return '<svg viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function flagSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3v18M6 4h11l-2 4 2 4H6" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
