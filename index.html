@@ -14,6 +14,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Line Sweep Pro" />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Load Inter non-render-blocking: the app must never wait on the font host
+       (offline / slow network). Renders instantly in the fallback, then swaps
+       to Inter when it arrives (display=swap). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap"
+        media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" /></noscript>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
