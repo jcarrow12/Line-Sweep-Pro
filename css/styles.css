@@ -461,3 +461,125 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
 }
+
+/* ============================================================================
+   NEUMORPHISM (soft UI) theme layer
+   One flat surface color; elevation comes only from a paired highlight
+   (top-left, white) + shadow (bottom-right, cool grey). Raised = extruded
+   panels/buttons; inset = wells/inputs/pressed. Monochrome chrome; status
+   hues (set inline by JS) are kept as functional soft-accents. Text contrast
+   is nudged past strict neumorphism so dense data stays readable.
+   Delete this whole block to revert to the Monday look.
+   ========================================================================== */
+:root {
+  --bg: #e6e9f1;
+  --surface: #e6e9f1;                 /* same as bg — the core neumorphic rule */
+  --nm-dark: #c4ccdb;                 /* bottom-right shadow */
+  --nm-light: #ffffff;                /* top-left highlight */
+  --ink: #3a3f54;
+  --ink-soft: #767d92;
+  --line: transparent;
+  --line-soft: #d9deea;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow-sm: 5px 5px 11px var(--nm-dark), -5px -5px 11px var(--nm-light);
+  --shadow-md: 8px 8px 18px var(--nm-dark), -8px -8px 16px var(--nm-light);
+  --shadow-lg: 12px 12px 34px rgba(60,72,110,.30), -10px -10px 26px var(--nm-light);
+}
+body { background: var(--bg); }
+
+/* ---- Raised panels: share the bg, no borders, soft dual shadow ---- */
+.group__body, .timeline, .card, .kpi, .pcard, .kcard, .modal,
+.popover, .store-utility-card {
+  background: var(--bg) !important;
+  border: 0 !important;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius);
+}
+.group__body::before { display: none; }            /* drop the hard colored bar */
+
+/* ---- Left rail ---- */
+.rail { background: var(--bg); box-shadow: 7px 0 18px -6px var(--nm-dark); }
+.rail__btn { color: var(--ink-soft); }
+.rail__btn:hover { background: transparent; box-shadow: var(--shadow-sm); color: var(--ink); transform: none; }
+.rail__btn.is-active {
+  color: var(--blue);
+  background: var(--bg);
+  box-shadow: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
+}
+.rail__btn.is-active::before { display: none; }
+.rail__logo { box-shadow: var(--shadow-sm); }
+
+/* ---- Top bar ---- */
+.topbar { background: var(--bg); border-bottom: 0; box-shadow: 0 6px 16px -8px var(--nm-dark); z-index: 5; }
+.topbar__search {
+  background: var(--bg); border: 0;
+  box-shadow: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
+}
+.topbar__search:focus-within { box-shadow: inset 5px 5px 10px var(--nm-dark), inset -5px -5px 10px var(--nm-light); }
+
+/* ---- Buttons ---- */
+.btn { border: 0; box-shadow: var(--shadow-sm); transition: box-shadow var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard); }
+.btn--soft { background: var(--bg); color: var(--ink); }
+.btn--primary { background: var(--blue); color: #fff; box-shadow: 5px 5px 12px var(--nm-dark), -4px -4px 10px var(--nm-light); }
+.btn--primary:hover { background: #0068d6; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn:active { transform: scale(.97); box-shadow: inset 3px 3px 7px var(--nm-dark), inset -3px -3px 7px var(--nm-light); }
+.btn--primary:active { box-shadow: inset 3px 3px 8px rgba(0,0,0,.28); }
+
+/* ---- Rows / board cells ---- */
+.row--header { background: transparent; }
+.row:not(.row--header):not(.row--add):hover { background: rgba(90,105,150,.06); }
+.row--add:hover { background: rgba(90,105,150,.05); }
+
+/* Status / priority pills: keep the (inline) status color but soften into a
+   soft-key capsule so they read as gentle buttons, not flat chips. */
+.pill { border-radius: 9px; box-shadow: 3px 3px 6px var(--nm-dark), -3px -3px 6px var(--nm-light); }
+.pill--priority { box-shadow: 3px 3px 6px var(--nm-dark), -3px -3px 6px var(--nm-light); }
+.pill:hover { transform: translateY(-1px); }
+
+/* Progress: colored fill sitting in a sunken well (classic neumorphic meter). */
+.progress {
+  background: var(--bg);
+  box-shadow: inset 3px 3px 6px var(--nm-dark), inset -2px -2px 5px var(--nm-light);
+}
+.progress__label { color: var(--ink); }
+
+/* Avatars, dots, chips get a gentle lift */
+.avatar { box-shadow: 3px 3px 6px var(--nm-dark), -3px -3px 5px var(--nm-light); }
+.timeline-chip:hover, .cell__name:hover { background: transparent; }
+.ms-chip { background: var(--bg); box-shadow: inset 2px 2px 5px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
+.ms-chip--empty { box-shadow: none; }
+.group__count { background: var(--bg); box-shadow: inset 2px 2px 4px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
+
+/* ---- Inputs (forms / modal) ---- */
+.input, .input--select, .input--area {
+  background: var(--bg) !important; border: 0 !important;
+  box-shadow: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
+}
+.input:focus { box-shadow: inset 5px 5px 9px var(--nm-dark), inset -5px -5px 9px var(--nm-light); }
+.modal__foot, .modal__head { border-color: var(--line-soft); background: transparent; }
+.modal__close { background: var(--bg); box-shadow: var(--shadow-sm); }
+.range { background: var(--bg); box-shadow: inset 2px 2px 5px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
+
+/* ---- Kanban: sunken column trays, raised cards ---- */
+.kcol {
+  background: var(--bg) !important;
+  box-shadow: inset 6px 6px 14px var(--nm-dark), inset -6px -6px 14px var(--nm-light);
+  border-radius: var(--radius);
+}
+.kcol__count { background: var(--bg); box-shadow: inset 2px 2px 4px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
+.kcard { border-left: 0 !important; }
+.kcard::before {          /* priority cue as a soft colored bar, not a hard border */
+  content: ''; position: absolute; left: 10px; top: 12px; bottom: 12px; width: 4px;
+  border-radius: 4px; background: var(--pc);
+}
+.kcard { position: relative; padding-left: 20px; }
+.kcard__progress { box-shadow: inset 2px 2px 4px var(--nm-dark), inset -1px -1px 3px var(--nm-light); background: var(--bg); }
+
+/* ---- People / dashboard wells ---- */
+.pstat, .pcard__cap-bar, .wlchart__track { background: var(--bg) !important; box-shadow: inset 3px 3px 6px var(--nm-dark), inset -3px -3px 6px var(--nm-light); }
+.kpi__icon { background: var(--bg); box-shadow: var(--shadow-sm); }
+.up-item:hover { background: rgba(90,105,150,.06); }
+
+/* ---- Modal backdrop keeps the frosted blur ---- */
+.modal { box-shadow: var(--shadow-lg); }
