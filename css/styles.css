@@ -395,7 +395,7 @@ svg { display: block; }
 .ms-editor__row { display: grid; grid-template-columns: 16px 18px minmax(70px, 1fr) 132px 92px 28px; align-items: center; gap: 7px; border-radius: 10px; }
 /* No drop-indicator bar — the lifted row is the cue (Rundown style). */
 .ms-editor__row.is-dragging { opacity: 1; transform: scale(1.01); background: var(--nm-base); box-shadow: 0 8px 22px rgba(60,72,110,.18); border-radius: 12px; position: relative; z-index: 2; }
-.ms-editor__handle { display: flex; align-items: center; justify-content: center; width: 16px; color: var(--ink-soft); cursor: grab; }
+.ms-editor__handle { display: flex; align-items: center; justify-content: center; width: 16px; color: var(--ink-soft); cursor: grab; touch-action: none; }
 .ms-editor__handle svg { width: 16px; height: 16px; fill: currentColor; }
 .ms-editor__handle:active { cursor: grabbing; }
 .ms-editor__who { padding-right: 22px; min-width: 0; }

@@ -977,26 +977,84 @@
     msField.appendChild(el('label', 'field__label', { text: 'Milestones' }));
     var msList = el('div', 'ms-editor');
     msField.appendChild(msList);
-    var dragFrom = null;
+    // Pointer-based live reorder (Rundown style): the dragged row follows the
+    // pointer, the other rows slide to open a gap, everything settles on release.
+    // Nothing is rebuilt mid-drag — pure transforms — so it stays smooth.
+    (function initSortable() {
+      var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+      var dragEl = null, rows = [], origIndex = 0, step = 0, startY = 0, target = 0, capHandle = null, capId = null;
+      function rowEls() { return Array.prototype.slice.call(msList.querySelectorAll('.ms-editor__row')); }
 
-    // FLIP: capture each row's position by milestone id, rebuild, then glide
-    // every row from its old spot to the new one on the house settle curve.
-    function flipMs(mutate) {
-      var first = {};
-      Array.prototype.forEach.call(msList.querySelectorAll('.ms-editor__row'), function (el) {
-        first[el.getAttribute('data-msid')] = el.getBoundingClientRect().top;
+      msList.addEventListener('pointerdown', function (e) {
+        var handle = e.target && e.target.closest ? e.target.closest('.ms-editor__handle') : null;
+        if (!handle) return;
+        var row = handle.closest('.ms-editor__row');
+        if (!row) return;
+        e.preventDefault();
+        dragEl = row; rows = rowEls(); origIndex = rows.indexOf(row); target = origIndex; startY = e.clientY;
+        step = (rows.length > 1
+          ? Math.abs(rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top)
+          : row.getBoundingClientRect().height + 8) || 44;
+        capHandle = handle; capId = e.pointerId;
+        try { handle.setPointerCapture(capId); } catch (err) {}
+        row.classList.add('m-lift'); row.style.transition = 'none'; row.style.zIndex = '5';
+        rows.forEach(function (r) { if (r !== row) r.style.transition = 'transform var(--motion) ' + SETTLE; });
+        document.body.style.userSelect = 'none';
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
       });
-      mutate();
-      if (M.reduced) return;
-      Array.prototype.forEach.call(msList.querySelectorAll('.ms-editor__row'), function (el) {
-        var a = first[el.getAttribute('data-msid')];
-        if (a == null) return;
-        var dy = a - el.getBoundingClientRect().top;
-        if (Math.abs(dy) < 0.5) return;
-        el.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }],
-          { duration: 190, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
-      });
-    }
+
+      function onMove(e) {
+        if (!dragEl) return;
+        var dy = e.clientY - startY;
+        dragEl.style.transform = 'translateY(' + dy + 'px) scale(1.02)';
+        var t = Math.max(0, Math.min(rows.length - 1, origIndex + Math.round(dy / step)));
+        if (t === target) return;
+        target = t;
+        rows.forEach(function (r, i) {
+          if (r === dragEl) return;
+          var shift = 0;
+          if (origIndex < target && i > origIndex && i <= target) shift = -step;
+          else if (origIndex > target && i >= target && i < origIndex) shift = step;
+          r.style.transform = shift ? 'translateY(' + shift + 'px)' : '';
+        });
+      }
+
+      function onUp() {
+        if (!dragEl) return;
+        var el = dragEl, from = origIndex, to = target;
+        if (capHandle) {
+          capHandle.removeEventListener('pointermove', onMove);
+          capHandle.removeEventListener('pointerup', onUp);
+          capHandle.removeEventListener('pointercancel', onUp);
+          try { capHandle.releasePointerCapture(capId); } catch (err) {}
+        }
+        document.body.style.userSelect = '';
+        // Capture current visual positions (drag/gap transforms still applied),
+        // then commit the new order and settle every row into place with a FLIP.
+        var firstTop = rows.map(function (r) { return r.getBoundingClientRect().top; });
+        rows.forEach(function (r) { r.style.transition = ''; r.style.transform = ''; });
+        el.classList.remove('m-lift'); el.style.zIndex = '';
+        if (to !== from) {
+          var addBtn = msList.querySelector('.ms-editor__add');
+          var order = rows.slice(); order.splice(from, 1); order.splice(to, 0, el);
+          order.forEach(function (r) { msList.insertBefore(r, addBtn); });
+          var moved = p.milestones.splice(from, 1)[0];
+          p.milestones.splice(to, 0, moved);
+        }
+        if (!M.reduced) {
+          rows.forEach(function (r, i) {
+            var dy = firstTop[i] - r.getBoundingClientRect().top;
+            var fromT = (r === el) ? 'translateY(' + dy + 'px) scale(1.02)' : 'translateY(' + dy + 'px)';
+            if (r !== el && Math.abs(dy) < 0.5) return;
+            r.animate([{ transform: fromT }, { transform: 'none' }],
+              { duration: 190, easing: SETTLE });
+          });
+        }
+        dragEl = null; rows = []; capHandle = null;
+      }
+    })();
 
     function renderMsEditor() {
       clear(msList);
@@ -1004,24 +1062,8 @@
       p.milestones.forEach(function (m, idx) {
         var rowm = el('div', 'ms-editor__row', { 'data-msid': m.id });
 
-        var handle = el('span', 'ms-editor__handle', { html: gripSVG(), title: 'Drag to reorder', draggable: 'true' });
-        handle.addEventListener('dragstart', function (e) {
-          dragFrom = idx; e.dataTransfer.effectAllowed = 'move';
-          try { e.dataTransfer.setData('text/plain', String(idx)); } catch (err) {}
-          rowm.classList.add('is-dragging');
-        });
-        handle.addEventListener('dragend', function () { dragFrom = null; rowm.classList.remove('is-dragging'); });
-        rowm.addEventListener('dragover', function (e) { e.preventDefault(); });
-        rowm.addEventListener('drop', function (e) {
-          e.preventDefault();
-          if (dragFrom === null || dragFrom === idx) return;
-          // FLIP glide (Rundown feel): rows ease from old to new position on the settle curve.
-          flipMs(function () {
-            var moved = p.milestones.splice(dragFrom, 1)[0];
-            p.milestones.splice(idx, 0, moved);
-            renderMsEditor();
-          });
-        });
+        // Grip: initiates the pointer-based reorder (see initSortable above).
+        var handle = el('span', 'ms-editor__handle', { html: gripSVG(), title: 'Drag to reorder' });
 
         var chk = el('input', 'ms-editor__chk', { type: 'checkbox' });
         chk.checked = m.done;
