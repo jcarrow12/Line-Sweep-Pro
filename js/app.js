@@ -183,7 +183,7 @@
   function progressBar(p) {
     var wrap = el('button', 'progress', { 'data-project': p.id, 'data-field': 'progress', title: p.progress + '% complete' });
     var fill = el('span', 'progress__fill');
-    var color = p.status === 'done' ? '#00c875' : (S.projectHealth(p).level === 'overdue' ? '#e2445c' : '#0073ea');
+    var color = p.status === 'done' ? '#6f9e86' : (S.projectHealth(p).level === 'overdue' ? '#bf6b78' : '#6d8bba');
     fill.style.background = color;
     fill.dataset.pct = '0';
     wrap.appendChild(fill);
@@ -423,7 +423,7 @@
       bar.style.left = x + 'px';
       bar.style.width = w2 + 'px';
       var h = S.projectHealth(p);
-      bar.style.background = h.level === 'overdue' ? '#e2445c' : (p.status === 'done' ? '#00c875' : S.statusMeta(p.status).color);
+      bar.style.background = h.level === 'overdue' ? '#bf6b78' : (p.status === 'done' ? '#6f9e86' : S.statusMeta(p.status).color);
       var barFill = el('span', 'gbar__fill'); barFill.style.width = p.progress + '%';
       bar.appendChild(barFill);
       bar.appendChild(el('span', 'gbar__label', { text: p.progress + '%' }));
@@ -538,7 +538,7 @@
 
     var pg = el('div', 'kcard__progress');
     var fill = el('span', 'kcard__progress-fill');
-    fill.style.background = p.status === 'done' ? '#00c875' : '#0073ea';
+    fill.style.background = p.status === 'done' ? '#6f9e86' : '#6d8bba';
     pg.appendChild(fill);
     card.appendChild(pg);
     requestAnimationFrame(function () { M.fill(fill, p.progress); });
@@ -601,7 +601,7 @@
       cap.appendChild(capLabel);
       var bar = el('div', 'pcard__cap-bar');
       var fill = el('span', 'pcard__cap-fill');
-      fill.style.background = level === 'High' ? '#e2445c' : (level === 'Free' ? '#c4c4c4' : '#0073ea');
+      fill.style.background = level === 'High' ? '#bf6b78' : (level === 'Free' ? '#9aa3b4' : '#6d8bba');
       bar.appendChild(fill);
       cap.appendChild(bar);
       card.appendChild(cap);
@@ -653,10 +653,10 @@
 
     // KPI cards
     var kpis = el('div', 'dash__kpis');
-    kpis.appendChild(kpi(st.total, 'Total projects', '#0073ea', gridSVG()));
-    kpis.appendChild(kpi(st.avgProgress, 'Avg progress', '#00c875', chartSVG(), '%'));
-    kpis.appendChild(kpi(st.overdue, 'Overdue', '#e2445c', alertSVG()));
-    kpis.appendChild(kpi(st.atRisk, 'At risk', '#fdab3d', clockSVG()));
+    kpis.appendChild(kpi(st.total, 'Total projects', '#6d8bba', gridSVG()));
+    kpis.appendChild(kpi(st.avgProgress, 'Avg progress', '#6f9e86', chartSVG(), '%'));
+    kpis.appendChild(kpi(st.overdue, 'Overdue', '#bf6b78', alertSVG()));
+    kpis.appendChild(kpi(st.atRisk, 'At risk', '#c1934f', clockSVG()));
     dash.appendChild(kpis);
 
     var cols = el('div', 'dash__cols');
@@ -818,9 +818,9 @@
       // stacked: active (blue) + overdue (red) + done (green)
       var done = l.w.total - l.w.active;
       var segs = [
-        { n: l.w.active - l.w.overdue, c: '#0073ea' },
-        { n: l.w.overdue, c: '#e2445c' },
-        { n: done, c: '#00c875' }
+        { n: l.w.active - l.w.overdue, c: '#6d8bba' },
+        { n: l.w.overdue, c: '#bf6b78' },
+        { n: done, c: '#6f9e86' }
       ];
       segs.forEach(function (s) {
         if (s.n <= 0) return;
@@ -836,7 +836,7 @@
       wrap.appendChild(row);
     });
     var legend = el('div', 'wlchart__legend');
-    [['#0073ea', 'Active'], ['#e2445c', 'Overdue'], ['#00c875', 'Done']].forEach(function (x) {
+    [['#6d8bba', 'Active'], ['#bf6b78', 'Overdue'], ['#6f9e86', 'Done']].forEach(function (x) {
       var i = el('span', 'wlchart__legend-item');
       var d = el('span', 'wlchart__legend-dot'); d.style.background = x[0];
       i.appendChild(d); i.appendChild(document.createTextNode(x[1]));

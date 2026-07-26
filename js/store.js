@@ -7,22 +7,22 @@
   // ---- Reference data -------------------------------------------------------
 
   var STATUSES = [
-    { id: 'not_started', label: 'Not started', color: '#c4c4c4' },
-    { id: 'working',     label: 'Working on it', color: '#fdab3d' },
-    { id: 'stuck',       label: 'Stuck',        color: '#e2445c' },
-    { id: 'on_hold',     label: 'On hold',      color: '#a25ddc' },
-    { id: 'done',        label: 'Done',         color: '#00c875' }
+    { id: 'not_started', label: 'Not started', color: '#9aa3b4' },
+    { id: 'working',     label: 'Working on it', color: '#c1934f' },
+    { id: 'stuck',       label: 'Stuck',        color: '#bf6b78' },
+    { id: 'on_hold',     label: 'On hold',      color: '#8f84b6' },
+    { id: 'done',        label: 'Done',         color: '#6f9e86' }
   ];
 
   var PRIORITIES = [
-    { id: 'low',      label: 'Low',      color: '#579bfc' },
-    { id: 'medium',   label: 'Medium',   color: '#5559df' },
-    { id: 'high',     label: 'High',     color: '#e2445c' },
-    { id: 'critical', label: 'Critical', color: '#333333' }
+    { id: 'low',      label: 'Low',      color: '#7f93c0' },
+    { id: 'medium',   label: 'Medium',   color: '#6f79b8' },
+    { id: 'high',     label: 'High',     color: '#bf6b78' },
+    { id: 'critical', label: 'Critical', color: '#556074' }
   ];
 
-  var AVATAR_COLORS = ['#0073ea', '#00c875', '#a25ddc', '#e2445c', '#fdab3d',
-    '#037f4c', '#ff642e', '#9d50dd', '#66ccff', '#bb3354', '#7f5347'];
+  var AVATAR_COLORS = ['#6d8bba', '#6f9e86', '#8f84b6', '#bf6b78', '#c1934f',
+    '#5f9e8f', '#c07a5a', '#8b78b8', '#6fa0b8', '#b06b86', '#8a8674'];
 
   // ---- Utilities ------------------------------------------------------------
 
@@ -75,9 +75,9 @@
     }
 
     var groups = [
-      { id: uid('grp'), name: 'In Production', color: '#0073ea', collapsed: false },
-      { id: uid('grp'), name: 'Upcoming', color: '#a25ddc', collapsed: false },
-      { id: uid('grp'), name: 'Completed', color: '#00c875', collapsed: false }
+      { id: uid('grp'), name: 'In Production', color: '#6d8bba', collapsed: false },
+      { id: uid('grp'), name: 'Upcoming', color: '#8f84b6', collapsed: false },
+      { id: uid('grp'), name: 'Completed', color: '#6f9e86', collapsed: false }
     ];
 
     function proj(o) {
@@ -163,7 +163,17 @@
   function load() {
     try {
       var raw = global.localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        var saved = JSON.parse(raw);
+        // Non-destructive palette migration: keep avatar colours in sync with
+        // the current (muted) palette without disturbing any user data.
+        if (saved && saved.people) {
+          saved.people.forEach(function (person, i) {
+            person.color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+          });
+        }
+        return saved;
+      }
     } catch (e) { /* ignore */ }
     var s = seed();
     persist(s);

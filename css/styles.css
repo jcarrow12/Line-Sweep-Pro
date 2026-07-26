@@ -463,123 +463,171 @@ svg { display: block; }
 }
 
 /* ============================================================================
-   NEUMORPHISM (soft UI) theme layer
-   One flat surface color; elevation comes only from a paired highlight
-   (top-left, white) + shadow (bottom-right, cool grey). Raised = extruded
-   panels/buttons; inset = wells/inputs/pressed. Monochrome chrome; status
-   hues (set inline by JS) are kept as functional soft-accents. Text contrast
-   is nudged past strict neumorphism so dense data stays readable.
-   Delete this whole block to revert to the Monday look.
+   NEUMORPHISM — full soft-UI theme (reference recipe)
+   Base #dde3ec with a 145deg gradient on raised faces; elevation from a paired
+   white highlight (top-left) + cool shadow (bottom-right). Raised = panels,
+   cards, buttons; inset = inputs, search, progress, kanban columns; pressed =
+   active. Chrome is monochrome; status/priority use a muted accent set (store.js).
+   Delete this block to revert.
    ========================================================================== */
 :root {
-  --bg: #e6e9f1;
-  --surface: #e6e9f1;                 /* same as bg — the core neumorphic rule */
-  --nm-dark: #c4ccdb;                 /* bottom-right shadow */
-  --nm-light: #ffffff;                /* top-left highlight */
-  --ink: #3a3f54;
-  --ink-soft: #767d92;
+  --nm-base: #dde3ec;
+  --nm-grad: linear-gradient(145deg, #e2e8f1 0%, #d8dee7 100%);
+  --nm-text: #3c4858;
+  --nm-text-soft: #7b8598;
+  --nm-accent: #5f7fb2;
+
+  --bg: #dde3ec;
+  --surface: #dde3ec;
+  --ink: #3c4858;
+  --ink-soft: #7b8598;
+  --blue: #5f7fb2;
   --line: transparent;
-  --line-soft: #d9deea;
-  --radius: 18px;
-  --radius-sm: 12px;
-  --shadow-sm: 5px 5px 11px var(--nm-dark), -5px -5px 11px var(--nm-light);
-  --shadow-md: 8px 8px 18px var(--nm-dark), -8px -8px 16px var(--nm-light);
-  --shadow-lg: 12px 12px 34px rgba(60,72,110,.30), -10px -10px 26px var(--nm-light);
-}
-body { background: var(--bg); }
+  --line-soft: rgba(156,165,178,.22);
+  --radius: 22px;
+  --radius-sm: 14px;
 
-/* ---- Raised panels: share the bg, no borders, soft dual shadow ---- */
-.group__body, .timeline, .card, .kpi, .pcard, .kcard, .modal,
-.popover, .store-utility-card {
-  background: var(--bg) !important;
-  border: 0 !important;
-  box-shadow: var(--shadow-md);
-  border-radius: var(--radius);
+  --nm-raised: inset 1px 1px 1px rgba(255,255,255,.70), inset -1px -1px 1px rgba(156,165,178,.35), 12px 12px 30px rgba(156,165,178,.55), -12px -12px 30px rgba(251,252,253,.85);
+  --nm-raised-sm: inset 1px 1px 1px rgba(255,255,255,.70), inset -1px -1px 1px rgba(156,165,178,.35), 6px 6px 15px rgba(156,165,178,.48), -6px -6px 15px rgba(251,252,253,.85);
+  --nm-inset: inset 6px 6px 16px rgba(156,165,178,.62), inset -6px -6px 16px rgba(251,252,253,.85);
+  --nm-inset-sm: inset 3px 3px 8px rgba(156,165,178,.52), inset -3px -3px 8px rgba(251,252,253,.85);
+  --shadow-sm: var(--nm-raised-sm);
+  --shadow-md: var(--nm-raised);
+  --shadow-lg: var(--nm-raised);
 }
-.group__body::before { display: none; }            /* drop the hard colored bar */
 
-/* ---- Left rail ---- */
-.rail { background: var(--bg); box-shadow: 7px 0 18px -6px var(--nm-dark); }
-.rail__btn { color: var(--ink-soft); }
-.rail__btn:hover { background: transparent; box-shadow: var(--shadow-sm); color: var(--ink); transform: none; }
-.rail__btn.is-active {
-  color: var(--blue);
-  background: var(--bg);
-  box-shadow: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
+body { background: var(--nm-base); color: var(--nm-text); }
+.view-root { background: var(--nm-base); }
+
+/* ---- Raised surfaces ---- */
+.group__body, .timeline, .card, .kpi, .pcard, .kcard, .modal, .popover {
+  background: var(--nm-base); background-image: var(--nm-grad);
+  border: 0 !important; box-shadow: var(--nm-raised); border-radius: var(--radius);
 }
+.kpi, .pcard, .kcard, .popover { box-shadow: var(--nm-raised-sm); }
+.group__body::before { display: none; }
+
+/* ---- Rail ---- */
+.rail { background: var(--nm-base); box-shadow: none; }
+.rail__logo { box-shadow: var(--nm-raised-sm); border-radius: 14px; }
+.rail__btn { color: var(--nm-text-soft); border-radius: 16px; transition: box-shadow .18s ease, color .18s ease; }
+.rail__btn:hover { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); color: var(--nm-text); transform: none; }
+.rail__btn.is-active { color: var(--nm-accent); background: var(--nm-base); box-shadow: var(--nm-inset); }
 .rail__btn.is-active::before { display: none; }
-.rail__logo { box-shadow: var(--shadow-sm); }
 
 /* ---- Top bar ---- */
-.topbar { background: var(--bg); border-bottom: 0; box-shadow: 0 6px 16px -8px var(--nm-dark); z-index: 5; }
-.topbar__search {
-  background: var(--bg); border: 0;
-  box-shadow: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
-}
-.topbar__search:focus-within { box-shadow: inset 5px 5px 10px var(--nm-dark), inset -5px -5px 10px var(--nm-light); }
+.topbar { background: var(--nm-base); border-bottom: 0; box-shadow: none; z-index: 5; }
+.topbar__title h1 { color: var(--nm-text); }
+.topbar__sub, .cell--head { color: var(--nm-text-soft); }
+.topbar__search { background: var(--nm-base); border: 0; box-shadow: var(--nm-inset-sm); border-radius: 999px; }
+.topbar__search:focus-within { box-shadow: var(--nm-inset-sm), 0 0 0 2px rgba(156,165,178,.40); }
+.topbar__search input { color: var(--nm-text); }
 
 /* ---- Buttons ---- */
-.btn { border: 0; box-shadow: var(--shadow-sm); transition: box-shadow var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard); }
-.btn--soft { background: var(--bg); color: var(--ink); }
-.btn--primary { background: var(--blue); color: #fff; box-shadow: 5px 5px 12px var(--nm-dark), -4px -4px 10px var(--nm-light); }
-.btn--primary:hover { background: #0068d6; transform: translateY(-1px); box-shadow: var(--shadow-md); }
-.btn:active { transform: scale(.97); box-shadow: inset 3px 3px 7px var(--nm-dark), inset -3px -3px 7px var(--nm-light); }
-.btn--primary:active { box-shadow: inset 3px 3px 8px rgba(0,0,0,.28); }
+.btn { border: 0; border-radius: 16px; color: var(--nm-text); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); transition: transform .15s ease, box-shadow .15s ease; }
+.btn:hover { transform: translateY(-2px); box-shadow: var(--nm-raised-sm); }
+.btn:active { transform: translateY(0); box-shadow: var(--nm-inset); }
+.btn--primary, .btn--primary:hover { background: var(--nm-base); background-image: var(--nm-grad); color: var(--nm-accent); }
+.btn--primary .btn__plus { color: var(--nm-accent); }
+.btn--soft { color: var(--nm-text); }
+.btn--ghost-danger { color: #b0616d; box-shadow: var(--nm-raised-sm); }
 
-/* ---- Rows / board cells ---- */
+/* ---- Board rows ---- */
 .row--header { background: transparent; }
-.row:not(.row--header):not(.row--add):hover { background: rgba(90,105,150,.06); }
-.row--add:hover { background: rgba(90,105,150,.05); }
+.row:not(.row--header):not(.row--add):hover { background: rgba(156,165,178,.12); }
+.row--add { width: 100%; }   /* <button> doesn't stretch by default → the right-edge gap */
+.row--add:hover { background: rgba(156,165,178,.09); }
+.row--add:hover .cell { color: var(--nm-accent); }
+.cell__name, .cell__name:hover, .timeline-chip:hover, .group__title:hover { background: transparent; }
+.cell__name { color: var(--nm-text); }
+.group__title { color: var(--nm-text) !important; }
+.group__count { color: var(--nm-text-soft); background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
 
-/* Status / priority pills: keep the (inline) status color but soften into a
-   soft-key capsule so they read as gentle buttons, not flat chips. */
-.pill { border-radius: 9px; box-shadow: 3px 3px 6px var(--nm-dark), -3px -3px 6px var(--nm-light); }
-.pill--priority { box-shadow: 3px 3px 6px var(--nm-dark), -3px -3px 6px var(--nm-light); }
-.pill:hover { transform: translateY(-1px); }
+/* ---- Health dots (muted) ---- */
+.hdot { box-shadow: none; }
+.hdot--ok { background: #6f9e86; }
+.hdot--risk { background: #c1934f; }
+.hdot--overdue { background: #bf6b78; }
+.hdot--done { background: #9aa3b4; }
 
-/* Progress: colored fill sitting in a sunken well (classic neumorphic meter). */
-.progress {
-  background: var(--bg);
-  box-shadow: inset 3px 3px 6px var(--nm-dark), inset -2px -2px 5px var(--nm-light);
-}
-.progress__label { color: var(--ink); }
+/* ---- Pills (muted colour fills from store.js, softly raised) ---- */
+.pill { border-radius: 999px; box-shadow: var(--nm-raised-sm); }
+.pill--muted { color: #fff; }
+.pill:hover { transform: translateY(-1px); filter: none; }
+.pill--priority { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); }
+.pill--priority:hover { background: var(--nm-base); background-image: var(--nm-grad); color: var(--pc); }
 
-/* Avatars, dots, chips get a gentle lift */
-.avatar { box-shadow: 3px 3px 6px var(--nm-dark), -3px -3px 5px var(--nm-light); }
-.timeline-chip:hover, .cell__name:hover { background: transparent; }
-.ms-chip { background: var(--bg); box-shadow: inset 2px 2px 5px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
-.ms-chip--empty { box-shadow: none; }
-.group__count { background: var(--bg); box-shadow: inset 2px 2px 4px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
+/* ---- Progress: colour fill in a sunken well ---- */
+.progress { background: var(--nm-base); box-shadow: var(--nm-inset-sm); border-radius: 999px; }
+.progress__label { color: var(--nm-text); }
 
-/* ---- Inputs (forms / modal) ---- */
-.input, .input--select, .input--area {
-  background: var(--bg) !important; border: 0 !important;
-  box-shadow: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
-}
-.input:focus { box-shadow: inset 5px 5px 9px var(--nm-dark), inset -5px -5px 9px var(--nm-light); }
-.modal__foot, .modal__head { border-color: var(--line-soft); background: transparent; }
-.modal__close { background: var(--bg); box-shadow: var(--shadow-sm); }
-.range { background: var(--bg); box-shadow: inset 2px 2px 5px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
+/* ---- Chips / avatars ---- */
+.avatar { box-shadow: var(--nm-raised-sm); }
+.ms-chip { background: var(--nm-base); box-shadow: var(--nm-inset-sm); border-radius: 12px; color: var(--nm-text); }
+.ms-chip--empty { box-shadow: none; color: var(--nm-text-soft); }
+.ms-chip__date, .ms-chip__flag { color: var(--nm-text-soft); }
+.ms-chip.is-late { box-shadow: var(--nm-inset-sm); }
+.ms-chip.is-late .ms-chip__date, .ms-chip.is-late .ms-chip__flag { color: #bf6b78; }
+.ms-chip.is-soon .ms-chip__date { color: #c1934f; }
+.timeline-chip__text { color: var(--nm-text); }
+.timeline-chip__due { background: var(--nm-base); box-shadow: var(--nm-inset-sm); color: var(--nm-text-soft); }
+.timeline-chip__due.is-late { color: #bf6b78; }
+.timeline-chip__due.is-soon { color: #c1934f; }
 
-/* ---- Kanban: sunken column trays, raised cards ---- */
-.kcol {
-  background: var(--bg) !important;
-  box-shadow: inset 6px 6px 14px var(--nm-dark), inset -6px -6px 14px var(--nm-light);
-  border-radius: var(--radius);
-}
-.kcol__count { background: var(--bg); box-shadow: inset 2px 2px 4px var(--nm-dark), inset -2px -2px 4px var(--nm-light); }
-.kcard { border-left: 0 !important; }
-.kcard::before {          /* priority cue as a soft colored bar, not a hard border */
-  content: ''; position: absolute; left: 10px; top: 12px; bottom: 12px; width: 4px;
-  border-radius: 4px; background: var(--pc);
-}
-.kcard { position: relative; padding-left: 20px; }
-.kcard__progress { box-shadow: inset 2px 2px 4px var(--nm-dark), inset -1px -1px 3px var(--nm-light); background: var(--bg); }
+/* ---- Inputs / modal ---- */
+.input, .input--select, .input--area { background: var(--nm-base) !important; background-image: none !important; border: 0 !important; box-shadow: var(--nm-inset); border-radius: 14px; color: var(--nm-text); }
+.input:focus { box-shadow: var(--nm-inset), 0 0 0 2px rgba(156,165,178,.40); }
+.range { background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
+.field__label { color: var(--nm-text-soft); }
+.modal__head, .modal__foot { border-color: var(--line-soft); background: transparent; }
+.modal__eyebrow { color: var(--nm-accent); }
+.modal__close { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); color: var(--nm-text); }
+.modal-backdrop { background: rgba(150,160,175,.42); }
+
+/* ---- Popover ---- */
+.popover { background: var(--nm-base); background-image: var(--nm-grad); }
+.swatch { box-shadow: var(--nm-raised-sm); }
+.menu-opt:hover, .people-opt:hover { background: rgba(156,165,178,.14); }
+
+/* ---- Kanban ---- */
+.kcol { background: var(--nm-base) !important; box-shadow: var(--nm-inset); border-radius: var(--radius); }
+.kcol__count { background: var(--nm-base); box-shadow: var(--nm-inset-sm); color: var(--nm-text-soft); }
+.kcard { border-left: 0 !important; position: relative; padding-left: 22px; }
+.kcard::before { content: ''; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 4px; border-radius: 4px; background: var(--pc); opacity: .8; }
+.kcard__title { color: var(--nm-text); }
+.kcard__due.is-late { color: #bf6b78; } .kcard__due.is-soon { color: #c1934f; }
+.kcard__progress { background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
+.ptag { background: var(--nm-base); box-shadow: var(--nm-inset-sm); color: var(--pc); }
 
 /* ---- People / dashboard wells ---- */
-.pstat, .pcard__cap-bar, .wlchart__track { background: var(--bg) !important; box-shadow: inset 3px 3px 6px var(--nm-dark), inset -3px -3px 6px var(--nm-light); }
-.kpi__icon { background: var(--bg); box-shadow: var(--shadow-sm); }
-.up-item:hover { background: rgba(90,105,150,.06); }
+.pstat { background: var(--nm-base) !important; box-shadow: var(--nm-inset-sm); }
+.pstat__value, .kpi__value, .donut__num, .pcard__name { color: var(--nm-text); }
+.pstat--danger .pstat__value { color: #bf6b78; }
+.pcard__cap-bar, .wlchart__track { background: var(--nm-base) !important; box-shadow: var(--nm-inset-sm); }
+.kpi__icon { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); }
+.kpi::after { display: none; }
+.card__title, .pcard__role, .donut__legend-label { color: var(--nm-text); }
+.up-item { border-bottom-color: var(--line-soft); }
+.up-item:hover { background: rgba(156,165,178,.12); }
+.up-item__name { color: var(--nm-text); }
+.up-item__flag { background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
+.up-item__flag.is-late { color: #bf6b78; } .up-item__flag.is-soon { color: #c1934f; }
+.up-item__when.is-late { color: #bf6b78; } .up-item__when.is-soon { color: #c1934f; }
 
-/* ---- Modal backdrop keeps the frosted blur ---- */
-.modal { box-shadow: var(--shadow-lg); }
+/* ---- Timeline ---- */
+.timeline__months { background: transparent; }
+.timeline__month { color: var(--nm-text-soft); }
+.timeline__label { background: var(--nm-base); border-right-color: var(--line-soft); }
+.timeline__today, .timeline__today-flag { background: #c1934f; }
+.gdia { border-color: var(--nm-text); }
+
+/* ---- Toasts ---- */
+.toast { background: var(--nm-text); }
+.toast--success { background: #4f8f6d; }
+.toast--info { background: #5f7fb2; }
+
+/* ---- Mobile tab bar ---- */
+.tabbar { background: var(--nm-base); border-top: 0; box-shadow: 0 -10px 26px -14px rgba(156,165,178,.75); }
+.tabbar__btn { color: var(--nm-text-soft); }
+.tabbar__btn.is-active { color: var(--nm-accent); }
+.tabbar__btn--fab { color: var(--nm-accent); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised); }
