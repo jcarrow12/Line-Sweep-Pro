@@ -147,14 +147,15 @@ svg { display: block; }
 }
 .row:last-child { border-bottom: 0; }
 .row--header { min-height: 40px; background: #fafbfd; position: sticky; top: 0; z-index: 2; }
-.row:not(.row--header):not(.row--add):hover { background: #f7f9fd; }
+.row:not(.row--header):not(.row--add):hover { background: #eef2fa; }
 .cell { padding: 8px 14px; min-width: 0; }
 .cell--head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 600; }
 .cell:first-child { padding-left: 20px; }
 
 .cell--name { display: flex; align-items: center; gap: 9px; }
 .cell__name { border: 0; background: transparent; text-align: left; font-size: 14px; font-weight: 500; color: var(--ink); padding: 4px 6px; border-radius: 6px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cell__name:hover { background: var(--line-soft); }
+/* No box around the name on hover — the whole row darkens instead (see .row:hover). */
+.cell__name:hover { background: transparent; }
 
 .hdot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
 .hdot--ok { background: #00c875; }
@@ -355,8 +356,13 @@ svg { display: block; }
 
 /* ===== Modal ============================================================== */
 .modal-host { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.modal-backdrop { position: absolute; inset: 0; background: rgba(20,26,50,.5); backdrop-filter: blur(2px); }
-.modal { position: relative; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+.modal-backdrop {
+  position: absolute; inset: 0; background: rgba(20,26,50,.5);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  /* Own compositor layer so the blur is rasterized once instead of every frame. */
+  will-change: opacity; transform: translateZ(0);
+}
+.modal { position: relative; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; will-change: transform, opacity; }
 .modal__head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line); }
 .modal__eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--blue); }
 .modal__close { border: 0; background: var(--line-soft); width: 30px; height: 30px; border-radius: 8px; font-size: 20px; color: var(--ink-soft); line-height: 1; }
