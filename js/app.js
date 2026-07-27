@@ -77,11 +77,15 @@
     return wrap;
   }
 
+  // The status pill carries the PROJECT's colour (identity). Priority decides
+  // fill vs. outline: high/critical projects are filled solid, everything else
+  // wears the colour as an outline + text.
   function statusPill(p) {
     var meta = S.statusMeta(p.status);
-    var pill = el('button', 'pill pill--status', { 'data-project': p.id, 'data-field': 'status', text: meta.label });
-    pill.style.background = meta.color;
-    if (p.status === 'not_started') pill.classList.add('pill--muted');
+    var strong = (p.priority === 'high' || p.priority === 'critical');
+    var pill = el('button', 'pill pill--status ' + (strong ? 'pill--fill' : 'pill--stroke'),
+      { 'data-project': p.id, 'data-field': 'status', text: meta.label });
+    pill.style.setProperty('--pjc', p.color || '#5a63ad');
     return pill;
   }
 
@@ -213,6 +217,65 @@
     });
   }
 
+  // ---- Right-click context menus --------------------------------------------
+
+  // A popover anchored to the cursor rather than an element.
+  function openContextMenuAt(x, y, build) {
+    closePopover();
+    var pop = el('div', 'popover popover--context');
+    build(pop);
+    document.body.appendChild(pop);
+    var pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var left = Math.min(x, window.innerWidth - pw - 8);
+    var top = Math.min(y, window.innerHeight - ph - 8);
+    pop.style.left = Math.max(8, left) + 'px';
+    pop.style.top = Math.max(8, top) + 'px';
+    activePopover = pop;
+    M.enter(pop, { y: 6, duration: 180 });
+    setTimeout(function () { document.addEventListener('mousedown', onDocDown, true); }, 0);
+  }
+
+  // Column header menu: greyscale toggle + show/hide columns.
+  function openColumnMenuAt(x, y, colKey) {
+    openContextMenuAt(x, y, function (pop) {
+      if (colKey) {
+        var col = S.columnByKey(colKey);
+        var g = el('button', 'ctx-item', { text: col.greyscale ? 'Restore colour' : 'Make greyscale' });
+        g.addEventListener('click', function () { S.toggleColumnGreyscale(colKey); closePopover(); });
+        pop.appendChild(g);
+        pop.appendChild(el('div', 'ctx-sep'));
+      }
+      pop.appendChild(el('div', 'ctx-label', { text: 'Show columns' }));
+      S.state.columns.forEach(function (c) {
+        var item = el('button', 'ctx-item ctx-item--check' + (c.visible ? ' is-on' : ''));
+        item.appendChild(el('span', 'ctx-check', { html: c.visible ? checkSVG() : '' }));
+        item.appendChild(el('span', 'ctx-item__label', { text: c.label }));
+        item.addEventListener('click', function () { S.toggleColumn(c.key); closePopover(); });
+        pop.appendChild(item);
+      });
+    });
+  }
+
+  // Row colour swatches — pick the project's identity colour.
+  function buildColorSwatches(pop, p) {
+    pop.classList.add('popover--colors');
+    pop.appendChild(el('div', 'ctx-label', { text: 'Row colour' }));
+    var grid = el('div', 'color-grid');
+    S.PROJECT_COLORS.forEach(function (c) {
+      var sw = el('button', 'color-sw' + (p.color === c ? ' is-on' : ''), { title: c });
+      sw.style.background = c;
+      sw.addEventListener('click', function () { S.setProjectColor(p.id, c); closePopover(); });
+      grid.appendChild(sw);
+    });
+    pop.appendChild(grid);
+  }
+  function openRowColorMenu(anchor, p) {
+    openPopover(anchor, function (pop) { buildColorSwatches(pop, p); });
+  }
+  function openRowColorMenuAt(x, y, p) {
+    openContextMenuAt(x, y, function (pop) { buildColorSwatches(pop, p); });
+  }
+
   // ---- Progress bar ---------------------------------------------------------
 
   function progressBar(p) {
@@ -246,6 +309,9 @@
       st.overdue + ' overdue · ' + st.avgProgress + '% avg progress';
 
     var root = el('div', 'board');
+    // Build the grid track list from the visible columns (name column fixed).
+    var cols = S.visibleColumns();
+    root.style.setProperty('--cols', 'minmax(200px,2.2fr) ' + cols.map(function (c) { return c.width; }).join(' '));
     var rowEls = [];
 
     S.state.groups.forEach(function (group) {
@@ -268,10 +334,17 @@
       var body = el('div', 'group__body');
       if (group.collapsed) body.style.display = 'none';
 
-      // Column header
+      // Column header — Project is fixed; the rest come from the column config.
+      // Right-click any header for greyscale + show/hide columns.
       var header = el('div', 'row row--header');
-      ['Project', 'Owner', 'Status', 'Timeline', 'Priority', 'Progress', 'Next milestone'].forEach(function (h) {
-        header.appendChild(el('div', 'cell cell--head', { text: h }));
+      var projHead = el('div', 'cell cell--head', { text: 'Project' });
+      projHead.addEventListener('contextmenu', function (e) { e.preventDefault(); openColumnMenuAt(e.clientX, e.clientY, null); });
+      header.appendChild(projHead);
+      cols.forEach(function (col) {
+        var hc = el('div', 'cell cell--head', { text: col.label });
+        if (col.greyscale) hc.classList.add('is-greyscale-head');
+        hc.addEventListener('contextmenu', function (e) { e.preventDefault(); openColumnMenuAt(e.clientX, e.clientY, col.key); });
+        header.appendChild(hc);
       });
       body.appendChild(header);
 
@@ -304,65 +377,56 @@
     M.stagger(rowEls, { step: 26, y: 10 });
   }
 
-  function buildRow(p, group) {
-    var owner = S.personById(p.ownerId);
-    var row = el('div', 'row', { 'data-project': p.id });
-    row.style.setProperty('--group', group.color);
-
-    // name
-    var nameCell = el('div', 'cell cell--name');
-    var nameBtn = el('button', 'cell__name', { text: p.name });
-    nameBtn.addEventListener('click', function () { openEditor(p.id); });
-    nameCell.appendChild(nameBtn);
-    row.appendChild(nameCell);
-
-    // owner(s)
-    var ownerCell = el('div', 'cell cell--owner');
-    var ownerBtn = el('button', 'owner-btn');
-    ownerBtn.appendChild(avatarStack(p.assigneeIds, 28));
-    ownerBtn.addEventListener('click', function (e) { e.stopPropagation(); openAssigneeMenu(ownerBtn, p); });
-    ownerCell.appendChild(ownerBtn);
-    row.appendChild(ownerCell);
-
-    // status
-    var stCell = el('div', 'cell cell--status');
-    var sp = statusPill(p);
-    sp.addEventListener('click', function (e) { e.stopPropagation(); openStatusMenu(sp, p); });
-    stCell.appendChild(sp);
-    row.appendChild(stCell);
-
-    // timeline
-    var tlCell = el('div', 'cell cell--timeline');
-    var tlBtn = el('button', 'timeline-chip', { onclick: function () { openEditor(p.id); } });
-    tlBtn.appendChild(el('span', 'timeline-chip__text', { text: fmtDate(p.startDate) + ' – ' + fmtDate(p.dueDate) }));
-    var dueDays = S.daysBetween(S.todayISO(), p.dueDate);
-    if (p.status !== 'done') {
-      var badge = el('span', 'timeline-chip__due', {
-        text: dueDays < 0 ? (Math.abs(dueDays) + 'd late') : (dueDays === 0 ? 'today' : dueDays + 'd left')
-      });
-      if (dueDays < 0) badge.classList.add('is-late');
-      else if (dueDays <= (S.state.settings.atRiskDays || 3)) badge.classList.add('is-soon');
-      tlBtn.appendChild(badge);
+  // Per-column cell builders, keyed by column id. renderBoard walks the
+  // visible-column list and appends these in order.
+  function buildCell(key, p) {
+    if (key === 'owner') {
+      var ownerCell = el('div', 'cell cell--owner', { 'data-label': 'Team' });
+      var ownerBtn = el('button', 'owner-btn');
+      ownerBtn.appendChild(avatarStack(p.assigneeIds, 28));
+      ownerBtn.addEventListener('click', function (e) { e.stopPropagation(); openAssigneeMenu(ownerBtn, p); });
+      ownerCell.appendChild(ownerBtn);
+      return ownerCell;
     }
-    tlCell.appendChild(tlBtn);
-    row.appendChild(tlCell);
-
-    // priority
-    var prCell = el('div', 'cell cell--priority');
-    var pp = priorityPill(p);
-    pp.addEventListener('click', function (e) { e.stopPropagation(); openPriorityMenu(pp, p); });
-    prCell.appendChild(pp);
-    row.appendChild(prCell);
-
-    // progress
-    var pgCell = el('div', 'cell cell--progress');
-    var pg = progressBar(p);
-    pg.addEventListener('click', function (e) { e.stopPropagation(); openProgressMenu(pg, p); });
-    pgCell.appendChild(pg);
-    row.appendChild(pgCell);
-
+    if (key === 'status') {
+      var stCell = el('div', 'cell cell--status', { 'data-label': 'Status' });
+      var sp = statusPill(p);
+      sp.addEventListener('click', function (e) { e.stopPropagation(); openStatusMenu(sp, p); });
+      stCell.appendChild(sp);
+      return stCell;
+    }
+    if (key === 'timeline') {
+      var tlCell = el('div', 'cell cell--timeline', { 'data-label': 'Timeline' });
+      var tlBtn = el('button', 'timeline-chip', { onclick: function () { openEditor(p.id); } });
+      tlBtn.appendChild(el('span', 'timeline-chip__text', { text: fmtDate(p.startDate) + ' – ' + fmtDate(p.dueDate) }));
+      var dueDays = S.daysBetween(S.todayISO(), p.dueDate);
+      if (p.status !== 'done') {
+        var badge = el('span', 'timeline-chip__due', {
+          text: dueDays < 0 ? (Math.abs(dueDays) + 'd late') : (dueDays === 0 ? 'today' : dueDays + 'd left')
+        });
+        if (dueDays < 0) badge.classList.add('is-late');
+        else if (dueDays <= (S.state.settings.atRiskDays || 3)) badge.classList.add('is-soon');
+        tlBtn.appendChild(badge);
+      }
+      tlCell.appendChild(tlBtn);
+      return tlCell;
+    }
+    if (key === 'priority') {
+      var prCell = el('div', 'cell cell--priority', { 'data-label': 'Priority' });
+      var pp = priorityPill(p);
+      pp.addEventListener('click', function (e) { e.stopPropagation(); openPriorityMenu(pp, p); });
+      prCell.appendChild(pp);
+      return prCell;
+    }
+    if (key === 'progress') {
+      var pgCell = el('div', 'cell cell--progress', { 'data-label': 'Progress' });
+      var pg = progressBar(p);
+      pg.addEventListener('click', function (e) { e.stopPropagation(); openProgressMenu(pg, p); });
+      pgCell.appendChild(pg);
+      return pgCell;
+    }
     // next milestone
-    var msCell = el('div', 'cell cell--milestone');
+    var msCell = el('div', 'cell cell--milestone', { 'data-label': 'Next milestone' });
     var nm = S.nextMilestone(p);
     if (nm) {
       var chip = el('div', 'ms-chip');
@@ -377,7 +441,33 @@
     } else {
       msCell.appendChild(el('span', 'ms-chip ms-chip--empty', { text: p.status === 'done' ? 'All complete' : 'No milestones' }));
     }
-    row.appendChild(msCell);
+    return msCell;
+  }
+
+  function buildRow(p, group) {
+    var row = el('div', 'row', { 'data-project': p.id });
+    row.style.setProperty('--group', group.color);
+    row.style.setProperty('--pjc', p.color || '#5a63ad');   // project identity colour
+
+    // name (fixed first column, with a project-colour dot + accent)
+    var nameCell = el('div', 'cell cell--name', { 'data-label': 'Project' });
+    var dot = el('button', 'row-dot', { title: 'Row colour — right-click or click to change' });
+    dot.addEventListener('click', function (e) { e.stopPropagation(); openRowColorMenu(dot, p); });
+    var nameBtn = el('button', 'cell__name', { text: p.name });
+    nameBtn.addEventListener('click', function () { openEditor(p.id); });
+    nameCell.appendChild(dot);
+    nameCell.appendChild(nameBtn);
+    nameCell.addEventListener('contextmenu', function (e) {
+      e.preventDefault(); openRowColorMenuAt(e.clientX, e.clientY, p);
+    });
+    row.appendChild(nameCell);
+
+    // dynamic, user-configurable columns
+    S.visibleColumns().forEach(function (col) {
+      var cell = buildCell(col.key, p);
+      if (col.greyscale) cell.classList.add('is-greyscale');
+      row.appendChild(cell);
+    });
 
     return row;
   }
@@ -459,7 +549,8 @@
       bar.style.left = x + 'px';
       bar.style.width = w2 + 'px';
       var h = S.projectHealth(p);
-      bar.style.background = h.level === 'overdue' ? '#b04e5b' : (p.status === 'done' ? '#4e8d6e' : S.statusMeta(p.status).color);
+      bar.style.background = p.color || '#5a63ad';   // project identity colour
+      if (h.level === 'overdue') bar.classList.add('is-late');   // red ring flags lateness
       var barFill = el('span', 'gbar__fill'); barFill.style.width = p.progress + '%';
       bar.appendChild(barFill);
       bar.appendChild(el('span', 'gbar__label', { text: p.progress + '%' }));
@@ -548,8 +639,10 @@
 
   function buildCard(p) {
     var owner = S.personById(p.ownerId);
-    var card = el('div', 'kcard', { draggable: 'true', 'data-project': p.id });
+    var strong = (p.priority === 'high' || p.priority === 'critical');
+    var card = el('div', 'kcard ' + (strong ? 'kcard--fill' : 'kcard--stroke'), { draggable: 'true', 'data-project': p.id });
     card.style.setProperty('--pc', S.priorityMeta(p.priority).color);
+    card.style.setProperty('--pjc', p.color || '#5a63ad');
 
     card.addEventListener('dragstart', function (e) {
       e.dataTransfer.setData('text/plain', p.id);

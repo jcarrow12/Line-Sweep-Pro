@@ -24,6 +24,38 @@
   var AVATAR_COLORS = ['#4f77ae', '#4e8d6e', '#7660a6', '#b04e5b', '#b58234',
     '#3f8f7e', '#b0623f', '#7159a3', '#4d86a8', '#a04e6e', '#7a6f52'];
 
+  // Each project carries its own colour. Fill vs. outline (in app.js) encodes
+  // priority; the hue simply identifies the project. Deep + distinct so the
+  // rows never read as washed out.
+  var PROJECT_COLORS = ['#3f6fb0', '#2f8f6b', '#8a5cc0', '#c0504e', '#c07a2e',
+    '#2f8f86', '#b0563f', '#5a63ad', '#3f8fb0', '#a84e78', '#6f8f3f', '#7a6f52'];
+
+  // Board columns beyond the fixed Project name. `visible` drives show/hide;
+  // `greyscale` desaturates that column's colour. Priority ships hidden — it's
+  // now available on demand via the column menu.
+  function defaultColumns() {
+    return [
+      { key: 'owner',    label: 'Team',           width: '92px',              visible: true,  greyscale: false },
+      { key: 'status',   label: 'Status',         width: '150px',             visible: true,  greyscale: false },
+      { key: 'timeline', label: 'Timeline',       width: '190px',             visible: true,  greyscale: false },
+      { key: 'priority', label: 'Priority',       width: '110px',             visible: false, greyscale: false },
+      { key: 'progress', label: 'Progress',       width: '150px',             visible: true,  greyscale: false },
+      { key: 'next',     label: 'Next milestone',  width: 'minmax(160px,1.4fr)', visible: true, greyscale: false }
+    ];
+  }
+
+  function nextProjectColor(existing) {
+    // Pick the palette colour least used so far, so a fresh project stands out.
+    var counts = PROJECT_COLORS.map(function () { return 0; });
+    (existing || []).forEach(function (p) {
+      var i = PROJECT_COLORS.indexOf(p.color);
+      if (i !== -1) counts[i]++;
+    });
+    var best = 0;
+    for (var i = 1; i < counts.length; i++) { if (counts[i] < counts[best]) best = i; }
+    return PROJECT_COLORS[best];
+  }
+
   // ---- Utilities ------------------------------------------------------------
 
   function uid(prefix) {
@@ -93,12 +125,16 @@
         dueDate: o.due,
         progress: o.progress,
         notes: o.notes || '',
+        color: nc(),
         milestones: o.milestones || [],
         createdAt: t
       };
     }
 
     var g0 = groups[0].id, g1 = groups[1].id, g2 = groups[2].id;
+
+    var pc = 0;
+    function nc() { var c = PROJECT_COLORS[pc % PROJECT_COLORS.length]; pc++; return c; }
 
     var projects = [
       proj({ name: 'Opening Night Graphics Package', groupId: g0, ownerId: people[0].id,
@@ -154,7 +190,8 @@
       people: people,
       groups: groups,
       projects: projects,
-      settings: { atRiskDays: 3 }
+      settings: { atRiskDays: 3 },
+      columns: defaultColumns()
     };
   }
 
@@ -175,11 +212,27 @@
             person.color = AVATAR_COLORS[i % AVATAR_COLORS.length];
           });
         }
-        // Migrate single-owner projects to the multi-assignee model.
+        // Migrate single-owner projects to the multi-assignee model, and give
+        // every project its own colour if it doesn't have one yet.
         if (saved && saved.projects) {
-          saved.projects.forEach(function (p) {
+          saved.projects.forEach(function (p, i) {
             if (!p.assigneeIds || !p.assigneeIds.length) p.assigneeIds = [p.ownerId];
             if (p.assigneeIds.indexOf(p.ownerId) === -1) p.ownerId = p.assigneeIds[0];
+            if (!p.color) p.color = PROJECT_COLORS[i % PROJECT_COLORS.length];
+          });
+        }
+        // Column configuration is a later addition — backfill and reconcile so
+        // new columns (e.g. Priority) appear for users who saved before it.
+        if (!saved.columns) saved.columns = defaultColumns();
+        else {
+          var defs = defaultColumns();
+          defs.forEach(function (d) {
+            var found = saved.columns.filter(function (c) { return c.key === d.key; })[0];
+            if (!found) saved.columns.push(d);
+            else { found.label = d.label; found.width = d.width; } // keep labels/widths current
+          });
+          saved.columns = saved.columns.filter(function (c) {
+            return defs.some(function (d) { return d.key === c.key; });
           });
         }
         return saved;
@@ -281,6 +334,7 @@
     STATUSES: STATUSES,
     PRIORITIES: PRIORITIES,
     AVATAR_COLORS: AVATAR_COLORS,
+    PROJECT_COLORS: PROJECT_COLORS,
 
     get state() { return state; },
     subscribe: function (fn) { listeners.push(fn); return function () { listeners = listeners.filter(function (l) { return l !== fn; }); }; },
@@ -320,6 +374,7 @@
         dueDate: data.dueDate || addDays(t, 14),
         progress: data.progress != null ? data.progress : 0,
         notes: data.notes || '',
+        color: data.color || nextProjectColor(state.projects),
         milestones: data.milestones || [],
         createdAt: t
       };
@@ -394,6 +449,36 @@
       state.people.push(person);
       emit({ type: 'person-add', id: person.id });
       return person;
+    },
+
+    setProjectColor: function (id, color) {
+      var p = projectById(id);
+      if (!p) return;
+      p.color = color;
+      emit({ type: 'update', id: id, field: 'color' });
+    },
+
+    // Board column config (show/hide + greyscale).
+    toggleColumn: function (key) {
+      var c = (state.columns || []).filter(function (x) { return x.key === key; })[0];
+      if (!c) return;
+      c.visible = !c.visible;
+      emit({ type: 'columns' });
+    },
+
+    toggleColumnGreyscale: function (key) {
+      var c = (state.columns || []).filter(function (x) { return x.key === key; })[0];
+      if (!c) return;
+      c.greyscale = !c.greyscale;
+      emit({ type: 'columns' });
+    },
+
+    visibleColumns: function () {
+      return (state.columns || []).filter(function (c) { return c.visible; });
+    },
+
+    columnByKey: function (key) {
+      return (state.columns || []).filter(function (c) { return c.key === key; })[0];
     },
 
     renameBoard: function (name) { state.board.name = name; emit({ type: 'board' }); },

@@ -142,7 +142,9 @@ svg { display: block; }
 
 .row {
   display: grid;
-  grid-template-columns: minmax(200px, 2.2fr) 92px 150px 190px 110px 150px minmax(160px, 1.4fr);
+  /* Track list is built from the visible columns (see app.js); the literal
+     fallback keeps the layout sane before --cols is set / on old caches. */
+  grid-template-columns: var(--cols, minmax(200px, 2.2fr) 92px 150px 190px 150px minmax(160px, 1.4fr));
   align-items: center; border-bottom: 1px solid var(--line-soft); min-height: 52px;
 }
 .row:last-child { border-bottom: 0; }
@@ -694,3 +696,73 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .pill--priority { color: var(--nm-text-soft); background: var(--nm-base); background-image: var(--nm-grad); }
 .pill--priority:hover { color: var(--nm-text); background: var(--nm-base); background-image: var(--nm-grad); }
 .ptag { color: var(--nm-text-soft) !important; background: var(--nm-base) !important; }
+
+/* ---- Per-project colour + right-click column tools -------------------------
+   Each project owns a colour (--pjc). Its status pill shows that colour: FILLED
+   for high/critical priority, OUTLINED (stroke + text) for lower priority. A
+   small dot by the name mirrors the row colour and opens the colour picker. */
+.pill--fill {
+  color: #fff;
+  background: var(--pjc);
+  background-image: none;
+  box-shadow: var(--nm-raised-sm);
+}
+.pill--fill:hover { color: #fff; background: var(--pjc); background-image: none; filter: brightness(1.06); transform: translateY(-1px); }
+.pill--stroke {
+  color: var(--pjc);
+  background: var(--nm-base);
+  background-image: var(--nm-grad);
+  box-shadow: var(--nm-raised-sm), inset 0 0 0 1.5px var(--pjc);
+}
+.pill--stroke:hover { color: var(--pjc); background: var(--nm-base); background-image: var(--nm-grad); transform: translateY(-1px); }
+
+/* Row-colour dot next to the project name. */
+.row-dot {
+  flex: 0 0 auto; width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--pjc);
+  box-shadow: var(--nm-raised-sm);
+  cursor: pointer;
+  transition: transform var(--motion-fast, 130ms) var(--ease-standard, ease);
+}
+.row-dot:hover { transform: scale(1.25); }
+
+/* Greyscale a column on demand (right-click its header). */
+.is-greyscale, .is-greyscale-head { filter: grayscale(1); opacity: .92; }
+
+/* Cursor-anchored context menu (columns / colours). */
+.popover--context { min-width: 190px; padding: 6px; }
+.ctx-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--nm-text-soft); font-weight: 600; padding: 6px 8px 4px; }
+.ctx-sep { height: 1px; background: var(--line-soft, rgba(156,165,178,.3)); margin: 5px 4px; }
+.ctx-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  border: 0; background: transparent; -webkit-appearance: none; appearance: none;
+  padding: 8px; border-radius: 8px; text-align: left; cursor: pointer;
+  font-size: 13px; color: var(--nm-text);
+  transition: background var(--motion-fast, 130ms) var(--ease-standard, ease);
+}
+.ctx-item:hover { background: rgba(156,165,178,.12); }
+.ctx-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: var(--nm-accent, #5a63ad); }
+.ctx-check svg { width: 14px; height: 14px; }
+.ctx-item:not(.is-on) .ctx-item__label { color: var(--nm-text-soft); }
+
+/* Colour picker grid. */
+.popover--colors { min-width: 168px; padding: 6px; }
+.color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 4px; }
+.color-sw {
+  width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+  cursor: pointer; box-shadow: var(--nm-raised-sm);
+  transition: transform var(--motion-fast, 130ms) var(--ease-standard, ease);
+}
+.color-sw:hover { transform: scale(1.12); }
+.color-sw.is-on { box-shadow: var(--nm-raised-sm), 0 0 0 2px var(--nm-base), 0 0 0 4px var(--nm-text, #3c4858); }
+
+/* Kanban cards + timeline bars carry the project colour too. High/critical
+   priority reads "filled" (bold accent + faint colour wash); lower priority
+   reads "outlined" (a slim colour stripe). */
+.kcard::before { background: var(--pjc); }
+.kcard--fill::before { opacity: 1; width: 5px; }
+.kcard--fill { box-shadow: var(--nm-raised-sm), inset 3px 0 0 var(--pjc); }
+.kcard--stroke::before { opacity: .85; width: 3px; }
+
+/* Timeline bar: red ring when the project is overdue. */
+.gbar.is-late { box-shadow: 0 0 0 2px #b04e5b, var(--nm-raised-sm); }
