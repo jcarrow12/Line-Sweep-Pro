@@ -1431,6 +1431,195 @@
     }
   }
 
+  // ==========================================================================
+  //  REPORTS — range/YTD/year summary + CSV / iCal export
+  // ==========================================================================
+
+  var reportState = null; // { preset, start, end, person }
+
+  function reportRangeFor(preset) {
+    function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+    var now = new Date(), y = now.getFullYear();
+    if (preset === 'month') return { start: ymd(new Date(y, now.getMonth(), 1)), end: ymd(new Date(y, now.getMonth() + 1, 0)) };
+    if (preset === 'quarter') { var q = Math.floor(now.getMonth() / 3); return { start: ymd(new Date(y, q * 3, 1)), end: ymd(new Date(y, q * 3 + 3, 0)) }; }
+    if (preset === 'ytd') return { start: y + '-01-01', end: ymd(now) };
+    if (preset === 'year') return { start: y + '-01-01', end: y + '-12-31' };
+    return null;
+  }
+
+  function renderReports() {
+    viewTitle.textContent = 'Reports';
+    if (!reportState) { var r = reportRangeFor('ytd'); reportState = { preset: 'ytd', start: r.start, end: r.end, person: null }; }
+    var rs = reportState;
+
+    // Projects whose span intersects the range; milestones dated within it.
+    var projects = S.state.projects.filter(function (p) {
+      if (rs.person && (p.assigneeIds || []).indexOf(rs.person) === -1) return false;
+      return p.startDate <= rs.end && p.dueDate >= rs.start;
+    }).slice().sort(function (a, b) { return a.startDate < b.startDate ? -1 : 1; });
+    var msInRange = [];
+    projects.forEach(function (p) {
+      (p.milestones || []).forEach(function (m) {
+        if (m.date >= rs.start && m.date <= rs.end && (!rs.person || !m.assigneeId || m.assigneeId === rs.person)) {
+          msInRange.push({ project: p, milestone: m });
+        }
+      });
+    });
+    msInRange.sort(function (a, b) { return a.milestone.date < b.milestone.date ? -1 : 1; });
+
+    var st = statsFor(projects);
+    var personName = rs.person ? (S.personById(rs.person) || {}).name : null;
+    viewSubtitle.textContent = fmtDate(rs.start) + ' – ' + fmtDate(rs.end) + (personName ? ' · ' + personName : '');
+
+    var wrap = el('div', 'report');
+
+    // ---- Controls -----------------------------------------------------------
+    var ctrl = el('div', 'report__controls');
+    var presets = [['month', 'This month'], ['quarter', 'This quarter'], ['ytd', 'Year to date'], ['year', 'This year'], ['custom', 'Custom']];
+    var pRow = el('div', 'report__presets');
+    presets.forEach(function (o) {
+      var b = el('button', 'tl-filter__chip' + (rs.preset === o[0] ? ' is-on' : ''), { text: o[1] });
+      b.addEventListener('click', function () {
+        rs.preset = o[0];
+        if (o[0] !== 'custom') { var rr = reportRangeFor(o[0]); rs.start = rr.start; rs.end = rr.end; }
+        renderReports();
+      });
+      pRow.appendChild(b);
+    });
+    ctrl.appendChild(pRow);
+
+    if (rs.preset === 'custom') {
+      var dates = el('div', 'report__dates');
+      var si = el('input', 'input input--sm input--date', { type: 'date', value: rs.start });
+      var ei = el('input', 'input input--sm input--date', { type: 'date', value: rs.end });
+      si.addEventListener('change', function () { rs.start = si.value || rs.start; renderReports(); });
+      ei.addEventListener('change', function () { rs.end = ei.value || rs.end; renderReports(); });
+      dates.appendChild(el('span', 'report__dates-label', { text: 'From' })); dates.appendChild(si);
+      dates.appendChild(el('span', 'report__dates-label', { text: 'to' })); dates.appendChild(ei);
+      ctrl.appendChild(dates);
+    }
+
+    // Person filter + exports
+    var pplRow = el('div', 'report__ppl');
+    var everyone = el('button', 'tl-filter__chip' + (!rs.person ? ' is-on' : ''), { text: 'Everyone' });
+    everyone.addEventListener('click', function () { rs.person = null; renderReports(); });
+    pplRow.appendChild(everyone);
+    S.state.people.forEach(function (pe) {
+      var c = el('button', 'tl-filter__chip' + (rs.person === pe.id ? ' is-on' : ''));
+      c.appendChild(avatar(pe, 20)); c.appendChild(el('span', null, { text: pe.name.split(' ')[0] }));
+      c.addEventListener('click', function () { rs.person = pe.id; renderReports(); });
+      pplRow.appendChild(c);
+    });
+    ctrl.appendChild(pplRow);
+
+    var exports = el('div', 'report__exports');
+    var csvBtn = el('button', 'btn btn--soft', { text: '⬇ CSV' });
+    csvBtn.addEventListener('click', function () { exportCSV(projects, rs); });
+    var icsBtn = el('button', 'btn btn--soft', { text: '⬇ Calendar (.ics)' });
+    icsBtn.addEventListener('click', function () { exportICS(msInRange, rs); });
+    var printBtn = el('button', 'btn btn--soft', { text: '🖨 Print' });
+    printBtn.addEventListener('click', function () { window.print(); });
+    exports.appendChild(csvBtn); exports.appendChild(icsBtn); exports.appendChild(printBtn);
+    ctrl.appendChild(exports);
+    wrap.appendChild(ctrl);
+
+    // ---- Summary ------------------------------------------------------------
+    var sum = el('div', 'report__summary');
+    function sc(v, l) { var c = el('div', 'report__stat'); c.appendChild(el('div', 'report__stat-v', { text: '' + v })); c.appendChild(el('div', 'report__stat-l', { text: l })); return c; }
+    sum.appendChild(sc(projects.length, 'Projects'));
+    sum.appendChild(sc(st.done, 'Completed'));
+    sum.appendChild(sc(st.overdue, 'Overdue'));
+    sum.appendChild(sc(st.avgProgress + '%', 'Avg progress'));
+    sum.appendChild(sc(msInRange.length, 'Milestones'));
+    wrap.appendChild(sum);
+
+    // ---- Projects table -----------------------------------------------------
+    var tblCard = el('div', 'report__section');
+    tblCard.appendChild(el('div', 'report__section-title', { text: 'Projects' }));
+    if (!projects.length) tblCard.appendChild(el('div', 'dash__empty', { text: 'No projects in this range.' }));
+    else {
+      var tbl = el('table', 'report__table');
+      var thead = el('tr', null);
+      ['Project', 'Team', 'Status', 'Start', 'Due', 'Progress'].forEach(function (h) { thead.appendChild(el('th', null, { text: h })); });
+      tbl.appendChild(thead);
+      projects.forEach(function (p) {
+        var tr = el('tr', null);
+        tr.addEventListener('click', function () { openEditor(p.id); });
+        tr.appendChild(el('td', 'report__td-name', { text: p.name }));
+        tr.appendChild(el('td', null, { text: (p.assigneeIds || []).map(function (id) { var pe = S.personById(id); return pe ? pe.name.split(' ')[0] : ''; }).filter(Boolean).join(', ') }));
+        tr.appendChild(el('td', null, { text: S.statusMeta(p.status).label }));
+        tr.appendChild(el('td', null, { text: fmtDate(p.startDate) }));
+        tr.appendChild(el('td', null, { text: fmtDate(p.dueDate) }));
+        tr.appendChild(el('td', null, { text: p.progress + '%' }));
+        tbl.appendChild(tr);
+      });
+      tblCard.appendChild(tbl);
+    }
+    wrap.appendChild(tblCard);
+
+    // ---- Milestones ---------------------------------------------------------
+    var msCard = el('div', 'report__section');
+    msCard.appendChild(el('div', 'report__section-title', { text: 'Milestones in range' }));
+    if (!msInRange.length) msCard.appendChild(el('div', 'dash__empty', { text: 'No milestones in this range.' }));
+    else {
+      msInRange.forEach(function (x) {
+        var row = el('button', 'report__ms', { onclick: function () { openEditor(x.project.id); } });
+        row.appendChild(el('span', 'report__ms-date', { text: fmtDate(x.milestone.date) }));
+        var chk = el('span', 'report__ms-chk' + (x.milestone.done ? ' is-done' : ''), { html: x.milestone.done ? checkSVG() : '' });
+        row.appendChild(chk);
+        row.appendChild(el('span', 'report__ms-name', { text: x.milestone.name }));
+        row.appendChild(el('span', 'report__ms-proj', { text: x.project.name }));
+        var who = x.milestone.assigneeId ? S.personById(x.milestone.assigneeId) : null;
+        row.appendChild(el('span', 'report__ms-who', { text: who ? who.name.split(' ')[0] : 'Everyone' }));
+        msCard.appendChild(row);
+      });
+    }
+    wrap.appendChild(msCard);
+
+    clear(viewRoot);
+    viewRoot.appendChild(wrap);
+    M.stagger(wrap.querySelectorAll('.report__stat, .report__section'), { step: 40, y: 12 });
+  }
+
+  // ---- Export helpers -------------------------------------------------------
+  function download(filename, mime, text) {
+    var blob = new Blob([text], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = el('a', null, { href: url, download: filename });
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+  function csvCell(s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  function exportCSV(projects, rs) {
+    var rows = [['Project', 'Team', 'Owner', 'Status', 'Priority', 'Group', 'Start', 'Due', 'Progress %', 'Milestones', 'Notes']];
+    projects.forEach(function (p) {
+      var grp = (S.groupById(p.groupId) || {}).name || '';
+      var team = (p.assigneeIds || []).map(function (id) { return (S.personById(id) || {}).name; }).filter(Boolean).join('; ');
+      rows.push([p.name, team, (S.personById(p.ownerId) || {}).name || '', S.statusMeta(p.status).label, S.priorityMeta(p.priority).label, grp, p.startDate, p.dueDate, p.progress, (p.milestones || []).length, p.notes || '']);
+    });
+    var csv = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
+    download('report-' + rs.start + '-to-' + rs.end + '.csv', 'text/csv', csv);
+    toast('CSV downloaded', 'success');
+  }
+  function exportICS(msInRange, rs) {
+    function dt(iso) { return iso.replace(/-/g, ''); }
+    function esc(s) { return String(s || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n'); }
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Project Tracker//EN', 'CALSCALE:GREGORIAN'];
+    msInRange.forEach(function (x, i) {
+      var d = dt(x.milestone.date);
+      var end = dt(S.addDays(x.milestone.date, 1));
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:ms-' + i + '-' + x.milestone.date + '@line-sweep-pro');
+      lines.push('DTSTART;VALUE=DATE:' + d);
+      lines.push('DTEND;VALUE=DATE:' + end);
+      lines.push('SUMMARY:' + esc(x.milestone.name + ' — ' + x.project.name));
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    download('milestones-' + rs.start + '-to-' + rs.end + '.ics', 'text/calendar', lines.join('\r\n'));
+    toast('Calendar file downloaded', 'success');
+  }
+
   function donut(st) {
     var wrap = el('div', 'donut-wrap');
     var SVGNS = 'http://www.w3.org/2000/svg';
@@ -1908,7 +2097,7 @@
   //  Navigation & wiring
   // ==========================================================================
 
-  var VIEWS = { board: renderBoard, timeline: renderTimeline, kanban: renderKanban, people: renderPeople, dashboard: renderDashboard };
+  var VIEWS = { board: renderBoard, timeline: renderTimeline, kanban: renderKanban, people: renderPeople, dashboard: renderDashboard, reports: renderReports };
 
   function navTo(view) {
     if (!VIEWS[view]) view = 'board';
@@ -1984,6 +2173,8 @@
         var name = prompt('Board name:', S.state.board.name);
         if (name) S.renameBoard(name.trim());
       });
+      var reports = el('button', 'menu-opt', { text: '📄  Reports' });
+      reports.addEventListener('click', function () { closePopover(); navTo('reports'); });
       var addP = el('button', 'menu-opt', { text: '👤  Add team member' });
       addP.addEventListener('click', function () {
         closePopover();
@@ -2000,7 +2191,7 @@
           S.resetDemo(); toast('Demo data reset', 'info');
         }
       });
-      pop.appendChild(rename); pop.appendChild(addP); pop.appendChild(reset);
+      pop.appendChild(reports); pop.appendChild(rename); pop.appendChild(addP); pop.appendChild(reset);
     });
   });
 
