@@ -977,3 +977,29 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .tl-filter__chip:hover { transform: translateY(-1px); color: var(--nm-text); }
 .tl-filter__chip.is-on { color: var(--nm-accent); box-shadow: var(--nm-inset-sm); }
 .tl-empty { padding: 40px 8px; text-align: center; color: var(--nm-text-soft); font-size: 14px; }
+
+/* ---- Employee self-view --------------------------------------------------- */
+.viewas-banner {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 22px; margin: 0; flex: none;
+  background: var(--nm-base); background-image: var(--nm-grad);
+  box-shadow: var(--nm-inset-sm); border-bottom: 1px solid var(--line-soft);
+}
+.viewas-banner__text { font-size: 13.5px; color: var(--nm-text); }
+.viewas-banner__text strong { font-weight: 700; }
+.viewas-banner__exit {
+  margin-left: auto; border: 0; cursor: pointer;
+  padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  color: var(--nm-accent); background: var(--nm-base); background-image: var(--nm-grad);
+  box-shadow: var(--nm-raised-sm);
+}
+.viewas-banner__exit:hover { transform: translateY(-1px); }
+
+.pcard__viewas {
+  margin-top: 12px; width: 100%; border: 0; cursor: pointer;
+  padding: 9px; border-radius: 10px; font-size: 12.5px; font-weight: 600;
+  color: var(--nm-accent); background: var(--nm-base); background-image: var(--nm-grad);
+  box-shadow: var(--nm-raised-sm);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+.pcard__viewas:hover { transform: translateY(-1px); }

@@ -15,6 +15,17 @@
   var currentView = 'board';
   var query = '';
   var timelineFilter = null;   // null = everyone; otherwise a person id
+  var viewAs = null;           // self-view: null = manager (all); otherwise a person id
+
+  // A project is in scope when it matches the search AND (if a self-view persona
+  // is active) that person is one of its assignees.
+  function inScope(p) {
+    return matchesQuery(p) && (!viewAs || (p.assigneeIds || []).indexOf(viewAs) !== -1);
+  }
+  function scopedProjects() {
+    return viewAs ? S.state.projects.filter(function (p) { return (p.assigneeIds || []).indexOf(viewAs) !== -1; }) : S.state.projects;
+  }
+  function setViewAs(id) { viewAs = id; if (id) timelineFilter = null; updateViewAsBanner(); render(); }
 
   // ---- Tiny DOM helpers -----------------------------------------------------
 
@@ -473,8 +484,8 @@
     var rowEls = [];
 
     S.state.groups.forEach(function (group) {
-      var projects = S.projectsInGroup(group.id).filter(matchesQuery);
-      if (query && !projects.length) return;
+      var projects = S.projectsInGroup(group.id).filter(inScope);
+      if ((query || viewAs) && !projects.length) return;
 
       var section = el('section', 'group', { 'data-group': group.id });
       section.style.setProperty('--group', group.color);
@@ -933,19 +944,21 @@
     viewTitle.textContent = 'Timeline';
     // Validate the remembered filter against the current roster.
     if (timelineFilter && !S.personById(timelineFilter)) timelineFilter = null;
-    var filterPerson = timelineFilter ? S.personById(timelineFilter) : null;
+    // Self-view persona wins over the manual filter.
+    var personId = viewAs || timelineFilter;
+    var filterPerson = personId ? S.personById(personId) : null;
 
-    var projects = S.state.projects.filter(matchesQuery).filter(function (p) {
-      return !timelineFilter || (p.assigneeIds || []).indexOf(timelineFilter) !== -1;
+    var projects = S.state.projects.filter(inScope).filter(function (p) {
+      return !personId || (p.assigneeIds || []).indexOf(personId) !== -1;
     }).slice().sort(function (a, b) {
       return a.startDate < b.startDate ? -1 : 1;
     });
     viewSubtitle.textContent = (filterPerson ? filterPerson.name + ' · ' : '') +
       projects.length + ' project' + (projects.length === 1 ? '' : 's') + ' on the schedule';
 
-    // A milestone is shown when unfiltered, or it belongs to the filtered person,
-    // or it's a project-level (everyone) milestone.
-    function msVisible(m) { return !timelineFilter || m.assigneeId === timelineFilter || !m.assigneeId; }
+    // A milestone is shown when unfiltered, or it belongs to the person, or it's
+    // a project-level (everyone) milestone.
+    function msVisible(m) { return !personId || m.assigneeId === personId || !m.assigneeId; }
 
     // Compute date range from what's actually shown.
     var today = S.todayISO();
@@ -968,18 +981,20 @@
 
     var wrap = el('div', 'timeline');
 
-    // Person filter: Everyone + each team member.
-    var filterBar = el('div', 'tl-filter');
-    function chip(label, id, person) {
-      var c = el('button', 'tl-filter__chip' + (timelineFilter === id ? ' is-on' : ''));
-      if (person) c.appendChild(avatar(person, 20));
-      c.appendChild(el('span', null, { text: label }));
-      c.addEventListener('click', function () { timelineFilter = id; renderTimeline(); });
-      return c;
+    // Person filter: Everyone + each team member. Hidden in self-view (locked).
+    if (!viewAs) {
+      var filterBar = el('div', 'tl-filter');
+      var mkChip = function (label, id, person) {
+        var c = el('button', 'tl-filter__chip' + (timelineFilter === id ? ' is-on' : ''));
+        if (person) c.appendChild(avatar(person, 20));
+        c.appendChild(el('span', null, { text: label }));
+        c.addEventListener('click', function () { timelineFilter = id; renderTimeline(); });
+        return c;
+      };
+      filterBar.appendChild(mkChip('Everyone', null, null));
+      S.state.people.forEach(function (pe) { filterBar.appendChild(mkChip(pe.name.split(' ')[0], pe.id, pe)); });
+      wrap.appendChild(filterBar);
     }
-    filterBar.appendChild(chip('Everyone', null, null));
-    S.state.people.forEach(function (pe) { filterBar.appendChild(chip(pe.name.split(' ')[0], pe.id, pe)); });
-    wrap.appendChild(filterBar);
 
     var scroll = el('div', 'timeline__scroll');
     var inner = el('div', 'timeline__inner');
@@ -1073,7 +1088,7 @@
 
   function renderKanban() {
     viewTitle.textContent = 'Kanban';
-    var projects = S.state.projects.filter(matchesQuery);
+    var projects = S.state.projects.filter(inScope);
     viewSubtitle.textContent = 'Drag cards between statuses to update';
 
     var board = el('div', 'kanban');
@@ -1281,6 +1296,10 @@
       if (!w.projects.length) list.appendChild(el('div', 'pcard__empty', { text: 'No projects assigned' }));
       card.appendChild(list);
 
+      var viewBtn = el('button', 'pcard__viewas', { text: 'View ' + person.name.split(' ')[0] + '’s board →' });
+      viewBtn.addEventListener('click', function () { setViewAs(person.id); navTo('board'); });
+      card.appendChild(viewBtn);
+
       grid.appendChild(card);
       cardEls.push(card);
     });
@@ -1311,10 +1330,27 @@
   //  DASHBOARD / insights
   // ==========================================================================
 
+  // Status counts for an arbitrary project list (for self-view scoping).
+  function statsFor(ps) {
+    var byStatus = {};
+    S.STATUSES.forEach(function (s) { byStatus[s.id] = 0; });
+    var overdue = 0, atRisk = 0, done = 0;
+    ps.forEach(function (p) {
+      byStatus[p.status] = (byStatus[p.status] || 0) + 1;
+      var h = S.projectHealth(p);
+      if (h.level === 'overdue') overdue++; else if (h.level === 'risk') atRisk++;
+      if (p.status === 'done') done++;
+    });
+    var total = ps.length;
+    var avg = total ? Math.round(ps.reduce(function (s, p) { return s + p.progress; }, 0) / total) : 0;
+    return { total: total, byStatus: byStatus, overdue: overdue, atRisk: atRisk, done: done, avgProgress: avg };
+  }
+
   function renderDashboard() {
     viewTitle.textContent = 'Insights';
-    var st = S.stats();
-    viewSubtitle.textContent = 'Department health at a glance';
+    var persona = viewAs ? S.personById(viewAs) : null;
+    var st = viewAs ? statsFor(scopedProjects()) : S.stats();
+    viewSubtitle.textContent = persona ? (persona.name + ' · personal snapshot') : 'Department health at a glance';
 
     var dash = el('div', 'dash');
 
@@ -1333,16 +1369,20 @@
     statusCard.appendChild(donut(st));
     cols.appendChild(statusCard);
 
-    // Workload chart
-    var wlCard = card('Workload by team member');
-    wlCard.appendChild(workloadChart());
-    cols.appendChild(wlCard);
+    // Workload chart — department-wide only; in self-view it's not meaningful.
+    if (!viewAs) {
+      var wlCard = card('Workload by team member');
+      wlCard.appendChild(workloadChart());
+      cols.appendChild(wlCard);
+    }
 
     dash.appendChild(cols);
 
-    // Upcoming milestones
+    // Upcoming milestones (scoped to the persona in self-view)
     var upCard = card('Upcoming milestones');
-    var ups = S.upcomingMilestones(21).slice(0, 8);
+    var ups = S.upcomingMilestones(21).filter(function (x) {
+      return !viewAs || (x.project.assigneeIds || []).indexOf(viewAs) !== -1;
+    }).slice(0, 8);
     if (!ups.length) upCard.appendChild(el('div', 'dash__empty', { text: 'No milestones in the next 3 weeks.' }));
     ups.forEach(function (x) {
       var owner = S.personById(x.project.ownerId);
@@ -1882,7 +1922,28 @@
   }
 
   function render() {
+    updateViewAsBanner();
     (VIEWS[currentView] || renderBoard)();
+  }
+
+  // Self-view banner (shown between the top bar and the view).
+  var viewAsBanner = null;
+  function updateViewAsBanner() {
+    if (!viewAsBanner) {
+      viewAsBanner = el('div', 'viewas-banner');
+      viewAsBanner.hidden = true;
+      viewRoot.parentNode.insertBefore(viewAsBanner, viewRoot);
+    }
+    if (viewAs && !S.personById(viewAs)) viewAs = null;
+    if (!viewAs) { viewAsBanner.hidden = true; return; }
+    var person = S.personById(viewAs);
+    clear(viewAsBanner);
+    viewAsBanner.hidden = false;
+    viewAsBanner.appendChild(avatar(person, 26));
+    viewAsBanner.appendChild(el('span', 'viewas-banner__text', { html: 'Viewing as <strong>' + person.name + '</strong> — showing only their work' }));
+    var exit = el('button', 'viewas-banner__exit', { text: 'Exit self-view' });
+    exit.addEventListener('click', function () { setViewAs(null); });
+    viewAsBanner.appendChild(exit);
   }
 
   // Re-render on store changes, with a pop on the touched cell where possible.
