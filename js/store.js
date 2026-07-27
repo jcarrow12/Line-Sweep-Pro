@@ -193,7 +193,7 @@
       people: people,
       groups: groups,
       projects: projects,
-      settings: { atRiskDays: 3, defaults: defaultProjectDefaults(), theme: 'auto', density: 'comfortable' },
+      settings: { atRiskDays: 3, defaults: defaultProjectDefaults(), theme: 'auto', density: 'comfortable', reminders: { enabled: true, days: 7 } },
       columns: defaultColumns(),
       milestonePresets: defaultPresets()
     };
@@ -264,6 +264,8 @@
         // Appearance prefs are a later addition.
         if (saved.settings && !saved.settings.theme) saved.settings.theme = 'auto';
         if (saved.settings && !saved.settings.density) saved.settings.density = 'comfortable';
+        // Reminder prefs are a later addition.
+        if (saved.settings && !saved.settings.reminders) saved.settings.reminders = { enabled: true, days: 7 };
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -655,6 +657,11 @@
 
     setTheme: function (t) { state.settings.theme = t; emit({ type: 'appearance' }); },
     setDensity: function (dn) { state.settings.density = dn; emit({ type: 'appearance' }); },
+    setReminders: function (patch) {
+      if (!state.settings.reminders) state.settings.reminders = { enabled: true, days: 7 };
+      Object.keys(patch).forEach(function (k) { state.settings.reminders[k] = patch[k]; });
+      emit({ type: 'settings' });
+    },
 
     // ---- Milestone presets ----
     addPreset: function (name, offset) {

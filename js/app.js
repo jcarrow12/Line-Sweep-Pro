@@ -1818,6 +1818,30 @@
     riskSec.appendChild(riskRow);
     wrap.appendChild(riskSec);
 
+    // ---- Reminders ----------------------------------------------------------
+    var rem = S.state.settings.reminders || { enabled: true, days: 7 };
+    var remSec = section('Milestone reminders', 'Show upcoming and overdue milestones when you open the app.');
+    var remToggleRow = el('div', 'settings__row');
+    remToggleRow.appendChild(el('label', 'settings__row-label', { text: 'On open' }));
+    var remSeg = el('div', 'seg');
+    [['on', 'On'], ['off', 'Off']].forEach(function (o) {
+      var b = el('button', 'seg__btn' + ((rem.enabled ? 'on' : 'off') === o[0] ? ' is-on' : ''), { text: o[1] });
+      b.addEventListener('click', function () { S.setReminders({ enabled: o[0] === 'on' }); });
+      remSeg.appendChild(b);
+    });
+    remToggleRow.appendChild(remSeg);
+    remSec.appendChild(remToggleRow);
+    var remDaysRow = el('div', 'settings__row');
+    remDaysRow.appendChild(el('label', 'settings__row-label', { text: 'Look ahead' }));
+    var remDaysWrap = el('div', 'settings__inline');
+    var remDaysIn = el('input', 'input input--sm', { type: 'number', min: '1', max: '90', value: rem.days != null ? rem.days : 7 });
+    remDaysIn.style.width = '80px';
+    remDaysIn.addEventListener('change', function () { var v = parseInt(remDaysIn.value, 10); if (!isNaN(v) && v > 0) S.setReminders({ days: v }); });
+    remDaysWrap.appendChild(remDaysIn); remDaysWrap.appendChild(el('span', 'settings__unit', { text: 'days' }));
+    remDaysRow.appendChild(remDaysWrap);
+    remSec.appendChild(remDaysRow);
+    wrap.appendChild(remSec);
+
     // ---- Milestone presets --------------------------------------------------
     var presetSec = section('Milestone presets', 'Reusable milestones you can drop into any project. “Day” is days after the project’s start date.');
     var list = el('div', 'preset-list');
@@ -2578,9 +2602,46 @@
     appearanceApplied = key;
   }
 
+  // ---- Milestone reminders --------------------------------------------------
+  function reminderItems() {
+    var r = S.state.settings.reminders || { days: 7 };
+    return S.upcomingMilestones(r.days != null ? r.days : 7); // includes overdue, sorted
+  }
+  function updateReminderBadge() {
+    var badge = document.getElementById('reminderBadge');
+    if (!badge) return;
+    var n = reminderItems().length;
+    if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.hidden = false; }
+    else badge.hidden = true;
+  }
+  function openReminders(anchor) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--reminders');
+      pop.appendChild(el('div', 'popover__label', { text: 'Coming up' }));
+      var items = reminderItems();
+      if (!items.length) { pop.appendChild(el('div', 'rem-empty', { text: 'Nothing due soon.' })); return; }
+      items.slice(0, 12).forEach(function (x) {
+        var it = el('button', 'rem-item', { onclick: function () { closePopover(); openEditor(x.project.id); } });
+        var flag = el('span', 'rem-item__flag');
+        if (x.inDays < 0) flag.classList.add('is-late'); else if (x.inDays <= 3) flag.classList.add('is-soon');
+        flag.innerHTML = flagSVG();
+        it.appendChild(flag);
+        var mid = el('div', 'rem-item__mid');
+        mid.appendChild(el('div', 'rem-item__name', { text: x.milestone.name }));
+        mid.appendChild(el('div', 'rem-item__proj', { text: x.project.name + ' · ' + fmtDate(x.milestone.date) }));
+        it.appendChild(mid);
+        var when = el('div', 'rem-item__when', { text: x.inDays < 0 ? Math.abs(x.inDays) + 'd late' : (x.inDays === 0 ? 'Today' : 'in ' + x.inDays + 'd') });
+        if (x.inDays < 0) when.classList.add('is-late'); else if (x.inDays <= 3) when.classList.add('is-soon');
+        it.appendChild(when);
+        pop.appendChild(it);
+      });
+    });
+  }
+
   function render() {
     applyAppearance(true);
     updateViewAsBanner();
+    updateReminderBadge();
     (VIEWS[currentView] || renderBoard)();
   }
 
@@ -2682,8 +2743,22 @@
   function alertSVG() { return '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }
   function clockSVG() { return '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }
 
+  // Reminders bell
+  (function () {
+    var bell = document.getElementById('reminderBtn');
+    if (bell) bell.addEventListener('click', function () { openReminders(bell); });
+  })();
+
   // ---- Boot -----------------------------------------------------------------
   applyAppearance(false);
+  // Surface upcoming milestones once on open.
+  (function () {
+    var r = S.state.settings.reminders;
+    if (r && r.enabled) setTimeout(function () {
+      var bell = document.getElementById('reminderBtn');
+      if (bell && reminderItems().length) openReminders(bell);
+    }, 700);
+  })();
   // Follow the OS light/dark setting while in 'auto'.
   if (window.matchMedia) {
     var mq = window.matchMedia('(prefers-color-scheme: dark)');

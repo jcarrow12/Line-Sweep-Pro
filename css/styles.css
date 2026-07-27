@@ -1193,3 +1193,30 @@ body { background: var(--nm-base); color: var(--nm-text); }
   transition: color var(--motion-fast) var(--ease-standard);
 }
 .seg__btn.is-on { color: var(--nm-accent); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); }
+
+/* ---- Reminders (topbar bell + digest) ------------------------------------- */
+.topbar__bell {
+  position: relative; border: 0; cursor: pointer; flex: none;
+  width: 40px; height: 40px; border-radius: 12px; color: var(--nm-text-soft);
+  background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.topbar__bell:hover { transform: translateY(-1px); color: var(--nm-text); }
+.topbar__bell svg { width: 20px; height: 20px; }
+.topbar__bell-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px; background: #c0504e; color: #fff; font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--nm-base);
+}
+.popover--reminders { min-width: 300px; max-width: 340px; padding: 8px; }
+.rem-empty { padding: 14px 10px; color: var(--nm-text-soft); font-size: 13px; text-align: center; }
+.rem-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left; padding: 9px 8px; border-radius: 10px; cursor: pointer; }
+.rem-item:hover { background: rgba(156,165,178,.12); }
+.rem-item__flag { width: 16px; height: 16px; color: var(--nm-text-soft); }
+.rem-item__flag.is-soon { color: #b58234; } .rem-item__flag.is-late { color: #b04e5b; }
+.rem-item__flag svg { width: 16px; height: 16px; }
+.rem-item__name { font-size: 13.5px; font-weight: 600; color: var(--nm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rem-item__proj { font-size: 11.5px; color: var(--nm-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rem-item__when { font-size: 12px; font-weight: 700; color: var(--nm-text-soft); white-space: nowrap; }
+.rem-item__when.is-soon { color: #b58234; } .rem-item__when.is-late { color: #b04e5b; }
