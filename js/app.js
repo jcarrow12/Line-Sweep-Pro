@@ -992,17 +992,49 @@
 
     var backdrop = el('div', 'modal-backdrop');
     var panel = el('div', 'modal');
+    // Remembered layout: 'stack' (single column) or 'wide' (two panes, side by side).
+    var layout = (S.state.settings && S.state.settings.editorLayout) || 'stack';
+    function applyLayout() { panel.classList.toggle('modal--wide', layout === 'wide'); }
+    function toggleLayout() {
+      layout = (layout === 'wide') ? 'stack' : 'wide';
+      applyLayout();
+      S.setEditorLayout(layout);
+    }
 
-    var head = el('div', 'modal__head');
+    var head = el('div', 'modal__head', { title: 'Right-click for layout options' });
     head.appendChild(el('div', 'modal__eyebrow', { text: isNew ? 'New project' : 'Edit project' }));
+    var headTools = el('div', 'modal__head-tools');
+    var layoutBtn = el('button', 'modal__layout', { title: 'Toggle wide / stacked layout', html: layoutSVG() });
+    layoutBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleLayout(); });
+    headTools.appendChild(layoutBtn);
     var closeBtn = el('button', 'modal__close', { html: '&times;', onclick: dismiss });
-    head.appendChild(closeBtn);
+    headTools.appendChild(closeBtn);
+    head.appendChild(headTools);
+    head.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      openContextMenuAt(e.clientX, e.clientY, function (pop) {
+        pop.appendChild(el('div', 'ctx-label', { text: 'Layout' }));
+        [['stack', 'Stacked (single column)'], ['wide', 'Wide (two columns)']].forEach(function (o) {
+          var item = el('button', 'ctx-item ctx-item--check' + (layout === o[0] ? ' is-on' : ''));
+          item.appendChild(el('span', 'ctx-check', { html: layout === o[0] ? checkSVG() : '' }));
+          item.appendChild(el('span', 'ctx-item__label', { text: o[1] }));
+          item.addEventListener('click', function () {
+            if (layout !== o[0]) toggleLayout();
+            closePopover();
+          });
+          pop.appendChild(item);
+        });
+      });
+    });
     panel.appendChild(head);
+    applyLayout();
 
     var form = el('div', 'modal__body');
+    var paneMain = el('div', 'modal__pane modal__pane--main');
+    var paneSide = el('div', 'modal__pane modal__pane--side');
 
     // Name
-    var nameInput = field(form, 'Project name', el('input', 'input', { type: 'text', value: p.name, placeholder: 'e.g. Opening Night Graphics' }));
+    var nameInput = field(paneMain, 'Project name', el('input', 'input', { type: 'text', value: p.name, placeholder: 'e.g. Opening Night Graphics' }));
 
     // Assigned people (multi-select) — the first picked is the lead/owner.
     var assigneeIds = (p.assigneeIds || (p.ownerId ? [p.ownerId] : [])).slice();
@@ -1024,14 +1056,14 @@
       peoplePick.appendChild(chip);
     });
     pickField.appendChild(peoplePick);
-    form.appendChild(pickField);
+    paneMain.appendChild(pickField);
 
     // Group
     var grid2 = el('div', 'form-grid');
     var groupSel = selectFrom(S.state.groups.map(function (g) { return { value: g.id, label: g.name }; }), p.groupId);
     grid2.appendChild(labeled('Group', groupSel));
     grid2.appendChild(el('div', 'field'));
-    form.appendChild(grid2);
+    paneMain.appendChild(grid2);
 
     // Status + Priority
     var grid2b = el('div', 'form-grid');
@@ -1039,7 +1071,7 @@
     var prioSel = selectFrom(S.PRIORITIES.map(function (s) { return { value: s.id, label: s.label }; }), p.priority);
     grid2b.appendChild(labeled('Status', statusSel));
     grid2b.appendChild(labeled('Priority', prioSel));
-    form.appendChild(grid2b);
+    paneMain.appendChild(grid2b);
 
     // Dates
     var grid2c = el('div', 'form-grid');
@@ -1047,7 +1079,7 @@
     var dueInput = el('input', 'input', { type: 'date', value: p.dueDate });
     grid2c.appendChild(labeled('Start date', startInput));
     grid2c.appendChild(labeled('Milestone / due date', dueInput));
-    form.appendChild(grid2c);
+    paneMain.appendChild(grid2c);
 
     // Progress
     var progWrap = el('div', 'field');
@@ -1055,10 +1087,10 @@
     var progInput = el('input', 'range', { type: 'range', min: '0', max: '100', step: '5', value: p.progress });
     progInput.addEventListener('input', function () { progLabel.textContent = 'Progress: ' + progInput.value + '%'; });
     progWrap.appendChild(progLabel); progWrap.appendChild(progInput);
-    form.appendChild(progWrap);
+    paneMain.appendChild(progWrap);
 
     // Notes
-    var notesInput = field(form, 'Notes', el('textarea', 'input input--area', { rows: '3', placeholder: 'Context, blockers, links…' }));
+    var notesInput = field(paneMain, 'Notes', el('textarea', 'input input--area', { rows: '3', placeholder: 'Context, blockers, links…' }));
     notesInput.value = p.notes;
 
     // Milestones editor
@@ -1215,8 +1247,10 @@
       msList.appendChild(add);
     }
     renderMsEditor();
-    form.appendChild(msField);
+    paneSide.appendChild(msField);
 
+    form.appendChild(paneMain);
+    form.appendChild(paneSide);
     panel.appendChild(form);
 
     // Footer
@@ -1380,6 +1414,7 @@
   function checkSVG() { return '<svg viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function gripSVG() { return '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>'; }
   function flagSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3v18M6 4h11l-2 4 2 4H6" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'; }
+  function layoutSVG() { return '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function alertSVG() { return '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }

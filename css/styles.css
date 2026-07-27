@@ -784,3 +784,37 @@ body { background: var(--nm-base); color: var(--nm-text); }
 /* Keep the warning colours winning where they apply. */
 .row .ms-chip.is-late .ms-chip__date, .row .ms-chip.is-late .ms-chip__flag { color: #b04e5b; }
 .row .ms-chip.is-soon .ms-chip__date { color: #b58234; }
+
+/* ---- Edit-project modal: stacked vs. wide (two-pane) layout ----------------
+   Right-click the modal header (or use the layout button) to switch. Stacked is
+   the default single column; wide splits details | milestones side by side and
+   widens the panel so a project with many milestones is easier to work with. */
+.modal__head-tools { display: flex; align-items: center; gap: 8px; }
+.modal__layout {
+  border: 0; background: var(--nm-base, var(--line-soft)); background-image: var(--nm-grad);
+  width: 30px; height: 30px; border-radius: 8px; color: var(--nm-text, var(--ink-soft));
+  box-shadow: var(--nm-raised-sm); display: inline-flex; align-items: center; justify-content: center;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+.modal__layout svg { width: 17px; height: 17px; }
+.modal__layout:hover { transform: translateY(-1px); }
+.modal__layout:active { transform: scale(.95); }
+
+.modal { transition: max-width var(--motion) var(--ease-settle); }
+.modal--wide { max-width: 940px; }
+.modal--wide .modal__body {
+  display: grid; grid-template-columns: 1fr 1fr; column-gap: 0; align-items: start;
+}
+.modal--wide .modal__pane--main { padding-right: 24px; }
+.modal--wide .modal__pane--side { padding-left: 24px; border-left: 1px solid var(--line-soft); }
+/* The side pane's milestone list can be long — let it scroll on its own so the
+   details pane stays put. */
+.modal--wide .modal__pane--side .ms-editor { max-height: 52vh; overflow-y: auto; }
+
+/* Narrow screens always stack, even if 'wide' is remembered. */
+@media (max-width: 760px) {
+  .modal--wide { max-width: 560px; }
+  .modal--wide .modal__body { grid-template-columns: 1fr; }
+  .modal--wide .modal__pane--main { padding-right: 0; }
+  .modal--wide .modal__pane--side { padding-left: 0; border-left: 0; }
+}

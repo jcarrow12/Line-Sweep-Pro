@@ -481,6 +481,13 @@
       return (state.columns || []).filter(function (c) { return c.key === key; })[0];
     },
 
+    // Editor layout preference ('stack' | 'wide'). Persist quietly — no need to
+    // re-render the board when the modal's own layout changes.
+    setEditorLayout: function (layout) {
+      state.settings.editorLayout = layout;
+      persist();
+    },
+
     renameBoard: function (name) { state.board.name = name; emit({ type: 'board' }); },
 
     resetDemo: function () {
