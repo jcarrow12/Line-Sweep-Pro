@@ -282,7 +282,7 @@
     var wrap = el('button', 'progress', { 'data-project': p.id, 'data-field': 'progress', title: p.progress + '% complete' });
     var track = el('span', 'progress__track');
     var fill = el('span', 'progress__fill');
-    fill.style.background = '#868da0';   // single neutral tone — length + % carry the meaning
+    fill.style.background = p.color || '#5a63ad';   // project identity colour
     fill.dataset.pct = '0';
     track.appendChild(fill);
     wrap.appendChild(track);

@@ -705,14 +705,18 @@ body { background: var(--nm-base); color: var(--nm-text); }
   color: #fff;
   background: var(--pjc);
   background-image: none;
+  border: 2px solid transparent;   /* match stroke geometry so both pills size identically */
   box-shadow: var(--nm-raised-sm);
 }
 .pill--fill:hover { color: #fff; background: var(--pjc); background-image: none; filter: brightness(1.06); transform: translateY(-1px); }
+/* Outline uses a real border (even thickness all the way around) rather than an
+   inset shadow, which read unevenly against the neumorphic drop shadow. */
 .pill--stroke {
   color: var(--pjc);
   background: var(--nm-base);
   background-image: var(--nm-grad);
-  box-shadow: var(--nm-raised-sm), inset 0 0 0 1.5px var(--pjc);
+  border: 2px solid var(--pjc);
+  box-shadow: none;
 }
 .pill--stroke:hover { color: var(--pjc); background: var(--nm-base); background-image: var(--nm-grad); transform: translateY(-1px); }
 
@@ -766,3 +770,17 @@ body { background: var(--nm-base); color: var(--nm-text); }
 
 /* Timeline bar: red ring when the project is overdue. */
 .gbar.is-late { box-shadow: 0 0 0 2px #b04e5b, var(--nm-raised-sm); }
+
+/* Whole-row tint: every neutral text element in a row takes the project's
+   colour (--pjc), so a row reads as one colour end to end. The late / due-soon
+   warning badges keep their red / amber — those are health signals, not
+   identity, so they deliberately stay. */
+.row .cell__name { color: var(--pjc); }
+.row .timeline-chip__text { color: var(--pjc); }
+.row .progress__label { color: var(--pjc); }
+.row .ms-chip__name { color: var(--pjc); }
+.row .ms-chip__date, .row .ms-chip__flag { color: var(--pjc); }
+.row .ms-chip--empty { color: var(--pjc); }
+/* Keep the warning colours winning where they apply. */
+.row .ms-chip.is-late .ms-chip__date, .row .ms-chip.is-late .ms-chip__flag { color: #b04e5b; }
+.row .ms-chip.is-soon .ms-chip__date { color: #b58234; }
