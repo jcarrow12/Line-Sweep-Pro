@@ -407,6 +407,21 @@
       emit({ type: 'delete', id: id });
     },
 
+    // Reorder the projects within one category. `orderedIds` is the new order
+    // of that group's projects; every other project keeps its slot.
+    reorderProjects: function (groupId, orderedIds) {
+      var queue = orderedIds.slice(), qi = 0;
+      var next = state.projects.map(function (p) { return p.groupId === groupId ? null : p; });
+      for (var i = 0; i < next.length; i++) {
+        if (next[i] === null) { next[i] = projectById(queue[qi++]) || null; }
+      }
+      next = next.filter(Boolean);
+      // Safety: append any group projects that weren't in orderedIds.
+      state.projects.forEach(function (p) { if (next.indexOf(p) === -1) next.push(p); });
+      state.projects = next;
+      emit({ type: 'projects-reorder' });
+    },
+
     // Reorder the phase categories on the board. `orderedIds` is the new full
     // order; any group missing from it is appended (safety).
     reorderGroups: function (orderedIds) {

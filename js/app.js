@@ -477,6 +477,8 @@
         rowEls.push(row);
       });
 
+      initProjectSort(body, group.id);
+
       // add-row
       var addRow = el('button', 'row row--add', { html: '<span class="cell">+ Add project</span>' });
       addRow.addEventListener('click', function () { openEditor(null, group.id); });
@@ -586,6 +588,83 @@
       else { var d = root.querySelector('.group.is-dragging-group'); if (d) d.classList.remove('is-dragging-group'); }
       proxy = null; indicator = null; dragId = null;
     }
+  }
+
+  // Grab a row's grip and drag to reorder projects within its category. The row
+  // lifts and floats with the pointer; the others part to open a gap; on release
+  // it settles into its slot with the house float. Same feel as columns.
+  function initProjectSort(body, groupId) {
+    var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    body.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      var grip = e.target && e.target.closest ? e.target.closest('.row-grip') : null;
+      if (!grip) return;
+      var row = grip.closest('.row');
+      if (!row) return;
+      e.preventDefault();
+      var rows = Array.prototype.slice.call(body.querySelectorAll('.row:not(.row--header):not(.row--add)'));
+      var origIndex = rows.indexOf(row);
+      if (origIndex === -1 || rows.length < 2) return;
+
+      var startY = e.clientY, activated = false, capId = e.pointerId, target = origIndex;
+      var T0 = [], Hh = [], baseTop = 0;
+      try { grip.setPointerCapture(capId); } catch (err) {}
+
+      function activate() {
+        activated = true;
+        T0 = rows.map(function (r) { return r.getBoundingClientRect().top; });
+        Hh = rows.map(function (r) { return r.getBoundingClientRect().height; });
+        baseTop = T0[0];
+        rows.forEach(function (r, i) { if (i !== origIndex) r.style.transition = 'transform 440ms ' + SETTLE; });
+        row.classList.add('is-row-dragging');
+      }
+      function newTops(t) {
+        var order = [];
+        for (var i = 0; i < rows.length; i++) if (i !== origIndex) order.push(i);
+        order.splice(t, 0, origIndex);
+        var y = baseTop, nt = new Array(rows.length);
+        order.forEach(function (idx) { nt[idx] = y; y += Hh[idx]; });
+        return nt;
+      }
+      function part() {
+        var nt = newTops(target);
+        for (var i = 0; i < rows.length; i++) { if (i === origIndex) continue; rows[i].style.transform = 'translateY(' + (nt[i] - T0[i]) + 'px)'; }
+      }
+      function computeTarget(dy) {
+        var center = T0[origIndex] + Hh[origIndex] / 2 + dy, insertAt = 0;
+        for (var i = 0; i < rows.length; i++) { if (i === origIndex) continue; if (T0[i] + Hh[i] / 2 < center) insertAt++; }
+        return insertAt;
+      }
+      function onMove(ev) {
+        var dy = ev.clientY - startY;
+        if (!activated) { if (Math.abs(dy) < 4) return; activate(); part(); }
+        row.style.transform = 'translateY(' + dy + 'px)';
+        var t = computeTarget(dy);
+        if (t !== target) { target = t; part(); }
+      }
+      function onUp(ev) {
+        document.removeEventListener('pointermove', onMove, true);
+        document.removeEventListener('pointerup', onUp, true);
+        try { grip.releasePointerCapture(capId); } catch (err) {}
+        if (!activated) return;
+        var order = [];
+        for (var i = 0; i < rows.length; i++) if (i !== origIndex) order.push(i);
+        order.splice(target, 0, origIndex);
+        var ids = order.map(function (idx) { return rows[idx].getAttribute('data-project'); });
+        var to = newTops(target)[origIndex] - T0[origIndex];
+        var dy = ev.clientY - startY;
+        var LIFT = '0 12px 26px -8px rgba(60,72,110,.34)';
+        var FLAT = '0 0px 0px 0px rgba(60,72,110,0)';
+        var a = row.animate(
+          [{ transform: 'translateY(' + dy + 'px)', boxShadow: LIFT },
+           { transform: 'translateY(' + to + 'px)', boxShadow: FLAT }],
+          { duration: 480, easing: SETTLE, fill: 'forwards' });
+        function commit() { skipRowStagger = true; S.reorderProjects(groupId, ids); }
+        a.finished.then(commit).catch(commit);
+      }
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onUp, true);
+    });
   }
 
   // Grab a column header and drag to reorder the columns. The WHOLE column —
@@ -777,8 +856,10 @@
 
     // name (fixed first column). Right-click the name to recolor the row.
     var nameCell = el('div', 'cell cell--name', { 'data-label': 'Project' });
+    var rgrip = el('button', 'row-grip', { html: gripSVG(), title: 'Drag to reorder' });
     var nameBtn = el('button', 'cell__name', { text: p.name });
     nameBtn.addEventListener('click', function () { openEditor(p.id); });
+    nameCell.appendChild(rgrip);
     nameCell.appendChild(nameBtn);
     nameCell.addEventListener('contextmenu', function (e) {
       e.preventDefault(); openRowColorMenuAt(e.clientX, e.clientY, p);

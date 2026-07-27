@@ -894,3 +894,24 @@ body { background: var(--nm-base); color: var(--nm-text); }
   box-shadow: var(--nm-raised-sm);
   font-weight: 600;
 }
+
+/* ---- Reorder projects (grab a row's grip and drag) ------------------------- */
+.cell--name { position: relative; }
+.row-grip {
+  position: absolute; left: 1px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 22px; padding: 0; border: 0; background: transparent;
+  color: var(--nm-text-soft, var(--ink-soft)); opacity: .28; cursor: grab;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.row:hover .row-grip { opacity: .7; }
+.row-grip:hover { opacity: 1; }
+.row-grip:active { cursor: grabbing; }
+.row-grip svg { width: 16px; height: 16px; }
+.row.is-row-dragging {
+  position: relative; z-index: 6; will-change: transform;
+  background: var(--nm-base); border-radius: 12px;
+  box-shadow: 0 12px 26px -8px rgba(60,72,110,.34);
+}
+/* Give the grip room so it doesn't sit under the name text. */
+.cell--name { padding-left: 22px; }
