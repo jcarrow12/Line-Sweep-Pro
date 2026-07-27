@@ -625,7 +625,9 @@
           for (var j = 0; j < n; j++) {
             var cc = colCell(r, j); if (!cc) continue;
             if (j === origIndex) cc.classList.add('is-col-dragging');
-            else cc.style.transition = 'transform var(--motion) ' + SETTLE;
+            // Columns part (and return) with the same slow float as the drop, so
+            // making room and settling back feel of a piece — not snappy.
+            else cc.style.transition = 'transform 440ms ' + SETTLE;
           }
         });
       }
