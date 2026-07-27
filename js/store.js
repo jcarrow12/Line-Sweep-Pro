@@ -24,7 +24,7 @@
   var AVATAR_COLORS = ['#4f77ae', '#4e8d6e', '#7660a6', '#b04e5b', '#b58234',
     '#3f8f7e', '#b0623f', '#7159a3', '#4d86a8', '#a04e6e', '#7a6f52'];
 
-  // Each project carries its own colour. Fill vs. outline (in app.js) encodes
+  // Each project carries its own color. Fill vs. outline (in app.js) encodes
   // priority; the hue simply identifies the project. Deep + distinct so the
   // rows never read as washed out.
   var PROJECT_COLORS = [
@@ -34,7 +34,7 @@
     '#8a5cc0', '#7660a6', '#5a63ad', '#7a6f52', '#6b8f8f'];
 
   // Board columns beyond the fixed Project name. `visible` drives show/hide;
-  // `greyscale` desaturates that column's colour. Priority ships hidden — it's
+  // `greyscale` desaturates that column's color. Priority ships hidden — it's
   // now available on demand via the column menu.
   function defaultColumns() {
     return [
@@ -48,7 +48,7 @@
   }
 
   function nextProjectColor(existing) {
-    // Pick the palette colour least used so far, so a fresh project stands out.
+    // Pick the palette color least used so far, so a fresh project stands out.
     var counts = PROJECT_COLORS.map(function () { return 0; });
     (existing || []).forEach(function (p) {
       var i = PROJECT_COLORS.indexOf(p.color);
@@ -208,7 +208,7 @@
       var raw = global.localStorage.getItem(KEY);
       if (raw) {
         var saved = JSON.parse(raw);
-        // Non-destructive palette migration: keep avatar colours in sync with
+        // Non-destructive palette migration: keep avatar colors in sync with
         // the current (muted) palette without disturbing any user data.
         if (saved && saved.people) {
           saved.people.forEach(function (person, i) {
@@ -216,7 +216,7 @@
           });
         }
         // Migrate single-owner projects to the multi-assignee model, and give
-        // every project its own colour if it doesn't have one yet.
+        // every project its own color if it doesn't have one yet.
         if (saved && saved.projects) {
           saved.projects.forEach(function (p, i) {
             if (!p.assigneeIds || !p.assigneeIds.length) p.assigneeIds = [p.ownerId];
@@ -238,6 +238,8 @@
             return defs.some(function (d) { return d.key === c.key; });
           });
         }
+        // Spelling migration: the name-style token 'colour' became 'color'.
+        if (saved.settings && saved.settings.nameStyle === 'colour') saved.settings.nameStyle = 'color';
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -520,7 +522,7 @@
       persist();
     },
 
-    // Project-name appearance on the board: 'colour' (project colour) | 'grey' |
+    // Project-name appearance on the board: 'color' (project color) | 'grey' |
     // 'dark' (dark greyscale).
     setNameStyle: function (style) {
       state.settings.nameStyle = style;

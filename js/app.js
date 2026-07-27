@@ -46,7 +46,7 @@
     var a = el('span', 'avatar', { title: person ? person.name + ' · ' + person.role : 'Unassigned' });
     if (size) a.style.setProperty('--sz', size + 'px');
     if (person) {
-      a.style.background = '#868da0';   // neutral — avatars identify by initials, not colour
+      a.style.background = '#868da0';   // neutral — avatars identify by initials, not color
       a.textContent = person.initials;
     } else {
       a.classList.add('avatar--empty');
@@ -77,9 +77,9 @@
     return wrap;
   }
 
-  // The status pill carries the PROJECT's colour (identity). Priority decides
+  // The status pill carries the PROJECT's color (identity). Priority decides
   // fill vs. outline: high/critical projects are filled solid, everything else
-  // wears the colour as an outline + text.
+  // wears the color as an outline + text.
   function statusPill(p) {
     var meta = S.statusMeta(p.status);
     var strong = (p.priority === 'high' || p.priority === 'critical');
@@ -236,20 +236,20 @@
   }
 
   // Column header menu: greyscale toggle + show/hide columns.
-  // colKey === null is the fixed Project (name) column, which gets name-colour
+  // colKey === null is the fixed Project (name) column, which gets name-color
   // options instead of a plain greyscale toggle.
   function openColumnMenuAt(x, y, colKey) {
     openContextMenuAt(x, y, function (pop) {
       if (colKey) {
         var col = S.columnByKey(colKey);
-        var g = el('button', 'ctx-item', { text: col.greyscale ? 'Restore colour' : 'Make greyscale' });
+        var g = el('button', 'ctx-item', { text: col.greyscale ? 'Restore color' : 'Make greyscale' });
         g.addEventListener('click', function () { S.toggleColumnGreyscale(colKey); closePopover(); });
         pop.appendChild(g);
         pop.appendChild(el('div', 'ctx-sep'));
       } else {
         pop.appendChild(el('div', 'ctx-label', { text: 'Project names' }));
-        var cur = (S.state.settings && S.state.settings.nameStyle) || 'colour';
-        [['colour', 'Project colour'], ['chip', 'Colour chip'], ['grey', 'Greyscale'], ['dark', 'Dark greyscale']].forEach(function (o) {
+        var cur = (S.state.settings && S.state.settings.nameStyle) || 'color';
+        [['color', 'Project color'], ['chip', 'Color chip'], ['grey', 'Greyscale'], ['dark', 'Dark greyscale']].forEach(function (o) {
           var item = el('button', 'ctx-item ctx-item--check' + (cur === o[0] ? ' is-on' : ''));
           item.appendChild(el('span', 'ctx-check', { html: cur === o[0] ? checkSVG() : '' }));
           item.appendChild(el('span', 'ctx-item__label', { text: o[1] }));
@@ -269,7 +269,7 @@
     });
   }
 
-  // ---- Colour maths (HSV <-> RGB <-> hex), ES5 ------------------------------
+  // ---- Color maths (HSV <-> RGB <-> hex), ES5 ------------------------------
   function cpClamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function hsvToRgb(h, s, v) {
     h = (h % 360 + 360) % 360; s = cpClamp(s, 0, 1); v = cpClamp(v, 0, 1);
@@ -311,7 +311,7 @@
     });
   }
 
-  // A neumorphic-styled colour picker: saturation/value area + hue bar + hex.
+  // A neumorphic-styled color picker: saturation/value area + hue bar + hex.
   // onChange(hex, committed) fires live while dragging (committed=false) and on
   // release / hex entry (committed=true).
   function buildColorPicker(container, initialHex, onChange) {
@@ -355,10 +355,10 @@
     render(false);
   }
 
-  // Row colour: preset quick-picks + a full neumorphic colour picker.
+  // Row color: preset quick-picks + a full neumorphic color picker.
   function buildColorSwatches(pop, p) {
     pop.classList.add('popover--colors');
-    pop.appendChild(el('div', 'ctx-label', { text: 'Row colour' }));
+    pop.appendChild(el('div', 'ctx-label', { text: 'Row color' }));
     var grid = el('div', 'color-grid');
     S.PROJECT_COLORS.forEach(function (c) {
       var sw = el('button', 'color-sw' + ((p.color || '').toLowerCase() === c.toLowerCase() ? ' is-on' : ''), { title: c });
@@ -396,7 +396,7 @@
     var wrap = el('button', 'progress', { 'data-project': p.id, 'data-field': 'progress', title: p.progress + '% complete' });
     var track = el('span', 'progress__track');
     var fill = el('span', 'progress__fill');
-    fill.style.background = p.color || '#5a63ad';   // project identity colour
+    fill.style.background = p.color || '#5a63ad';   // project identity color
     fill.dataset.pct = '0';
     track.appendChild(fill);
     wrap.appendChild(track);
@@ -423,8 +423,8 @@
       st.overdue + ' overdue · ' + st.avgProgress + '% avg progress';
 
     var root = el('div', 'board');
-    // Project-name appearance (colour / grey / dark greyscale).
-    var nameStyle = (S.state.settings && S.state.settings.nameStyle) || 'colour';
+    // Project-name appearance (color / grey / dark greyscale).
+    var nameStyle = (S.state.settings && S.state.settings.nameStyle) || 'color';
     if (nameStyle === 'grey') root.classList.add('names-grey');
     else if (nameStyle === 'dark') root.classList.add('names-dark');
     else if (nameStyle === 'chip') root.classList.add('names-chip');
@@ -497,9 +497,13 @@
 
     clear(viewRoot);
     viewRoot.appendChild(root);
-    M.stagger(rowEls, { step: 26, y: 10 });
+    // Skip the row entrance pop when a column reorder is about to FLIP the cells
+    // into place, so the two animations don't fight.
+    if (skipRowStagger) skipRowStagger = false;
+    else M.stagger(rowEls, { step: 26, y: 10 });
     initGroupSort(root);
   }
+  var skipRowStagger = false;
 
   // Grab a category's header grip to reorder the phase categories. The dragged
   // section dims in place while a lightweight header proxy follows the pointer;
@@ -584,9 +588,27 @@
     }
   }
 
+  // A stable identity for a board cell across a re-render, so column-reorder can
+  // FLIP each cell from its old spot to its new one. Header cells key by group +
+  // column; data cells key by project + column-class.
+  function cellKey(c) {
+    var row = c.closest ? c.closest('.row') : null;
+    if (!row) return null;
+    var m = /cell--(\w+)/.exec(c.className);
+    var ck = m ? m[1] : (c.getAttribute('data-colkey') || 'x');
+    if (row.classList.contains('row--header')) {
+      var sec = c.closest('.group'); var gid = sec ? sec.getAttribute('data-group') : '';
+      var hk = c.getAttribute('data-colkey') || 'project';
+      return 'H:' + gid + ':' + hk;
+    }
+    var pid = row.getAttribute('data-project');
+    return pid ? 'R:' + pid + ':' + ck : null;
+  }
+
   // Grab a column header and drag to reorder the columns — same feel as the
   // milestone reorder: a lightweight proxy follows the pointer, the other head
-  // cells part to open a gap, and the dragged column settles into its slot.
+  // cells part to open a gap, and the whole board settles (FLIP) into the new
+  // order on release.
   function initColumnSort(header) {
     var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
     header.addEventListener('pointerdown', function (e) {
@@ -644,17 +666,37 @@
         document.removeEventListener('pointerup', onUp, true);
         try { cell.releasePointerCapture(capId); } catch (err) {}
         if (!activated) return;
-        var nl = newLefts(target);
         var order = [];
         for (var i = 0; i < cells.length; i++) if (i !== origIndex) order.push(i);
         order.splice(target, 0, origIndex);
         var keys = order.map(function (idx) { return cells[idx].getAttribute('data-colkey'); });
-        var from = ev.clientX - startX, to = nl[origIndex] - L0[origIndex];
-        var anim = proxy.animate(
-          [{ transform: 'translateX(' + from + 'px)' }, { transform: 'translateX(' + to + 'px)' }],
-          { duration: 300, easing: SETTLE, fill: 'forwards' });
-        function commit() { if (proxy) proxy.remove(); S.reorderColumns(keys); }
-        anim.finished.then(commit).catch(commit);
+
+        // FLIP: capture where every board cell sits now, commit the reorder
+        // (which re-renders in the new order), then glide each cell from its old
+        // position to its new one with the house settle — so the whole board
+        // eases into place instead of snapping.
+        var first = {};
+        Array.prototype.forEach.call(viewRoot.querySelectorAll('.row .cell'), function (c) {
+          var k = cellKey(c); if (k) first[k] = c.getBoundingClientRect();
+        });
+        // The dragged header should glide from where it was dropped, not its old slot.
+        var draggedKey = cellKey(cell);
+        if (draggedKey && proxy) first[draggedKey] = proxy.getBoundingClientRect();
+        if (proxy) { proxy.remove(); proxy = null; }
+
+        skipRowStagger = true;
+        S.reorderColumns(keys); // re-renders the board in the new order
+
+        requestAnimationFrame(function () {
+          Array.prototype.forEach.call(viewRoot.querySelectorAll('.row .cell'), function (c) {
+            var k = cellKey(c); if (!k || !first[k]) return;
+            var last = c.getBoundingClientRect();
+            var dx = first[k].left - last.left, dy = first[k].top - last.top;
+            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+            c.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'none' }],
+              { duration: 340, easing: SETTLE });
+          });
+        });
       }
       document.addEventListener('pointermove', onMove, true);
       document.addEventListener('pointerup', onUp, true);
@@ -731,9 +773,9 @@
   function buildRow(p, group) {
     var row = el('div', 'row', { 'data-project': p.id });
     row.style.setProperty('--group', group.color);
-    row.style.setProperty('--pjc', p.color || '#5a63ad');   // project identity colour
+    row.style.setProperty('--pjc', p.color || '#5a63ad');   // project identity color
 
-    // name (fixed first column). Right-click the name to recolour the row.
+    // name (fixed first column). Right-click the name to recolor the row.
     var nameCell = el('div', 'cell cell--name', { 'data-label': 'Project' });
     var nameBtn = el('button', 'cell__name', { text: p.name });
     nameBtn.addEventListener('click', function () { openEditor(p.id); });
@@ -830,7 +872,7 @@
       bar.style.left = x + 'px';
       bar.style.width = w2 + 'px';
       var h = S.projectHealth(p);
-      bar.style.background = p.color || '#5a63ad';   // project identity colour
+      bar.style.background = p.color || '#5a63ad';   // project identity color
       if (h.level === 'overdue') bar.classList.add('is-late');   // red ring flags lateness
       var barFill = el('span', 'gbar__fill'); barFill.style.width = p.progress + '%';
       bar.appendChild(barFill);

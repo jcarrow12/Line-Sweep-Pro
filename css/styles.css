@@ -582,14 +582,14 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .hdot--overdue { background: #b04e5b; }
 .hdot--done { background: #868fa1; }
 
-/* ---- Pills (muted colour fills from store.js, softly raised) ---- */
+/* ---- Pills (muted color fills from store.js, softly raised) ---- */
 .pill { border-radius: 999px; box-shadow: var(--nm-raised-sm); }
 .pill--muted { color: #fff; }
 .pill:hover { transform: translateY(-1px); filter: none; }
 .pill--priority { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); }
 .pill--priority:hover { background: var(--nm-base); background-image: var(--nm-grad); color: var(--pc); }
 
-/* ---- Progress: colour fill in a sunken well ---- */
+/* ---- Progress: color fill in a sunken well ---- */
 .progress { background: transparent; box-shadow: none; }
 .progress__track { background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
 .progress__label { color: var(--nm-text); }
@@ -689,18 +689,18 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .ms-editor__proxy-name { font-size: 13px; color: var(--nm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-editor__proxy-date, .ms-editor__proxy-who { font-size: 12px; color: var(--nm-text-soft); white-space: nowrap; }
 
-/* ---- Colour simplification: status is the only coded colour on a row --------
+/* ---- Color simplification: status is the only coded color on a row --------
    Priority reads as neutral text (Critical a touch stronger); the health dot is
    gone (the date badge already flags "late"); avatars + progress are neutral.
-   Status pills keep their colour, and red stays reserved for genuinely late. */
+   Status pills keep their color, and red stays reserved for genuinely late. */
 .pill--priority { color: var(--nm-text-soft); background: var(--nm-base); background-image: var(--nm-grad); }
 .pill--priority:hover { color: var(--nm-text); background: var(--nm-base); background-image: var(--nm-grad); }
 .ptag { color: var(--nm-text-soft) !important; background: var(--nm-base) !important; }
 
-/* ---- Per-project colour + right-click column tools -------------------------
-   Each project owns a colour (--pjc). Its status pill shows that colour: FILLED
+/* ---- Per-project color + right-click column tools -------------------------
+   Each project owns a color (--pjc). Its status pill shows that color: FILLED
    for high/critical priority, OUTLINED (stroke + text) for lower priority. A
-   small dot by the name mirrors the row colour and opens the colour picker. */
+   small dot by the name mirrors the row color and opens the color picker. */
 .pill--fill {
   color: #fff;
   background: var(--pjc);
@@ -724,7 +724,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 }
 .pill--stroke:hover { color: var(--pjc); background: var(--nm-base); background-image: var(--nm-grad); transform: translateY(-1px); }
 
-/* Row-colour dot next to the project name. */
+/* Row-color dot next to the project name. */
 .row-dot {
   flex: 0 0 auto; width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%;
   background: var(--pjc);
@@ -737,7 +737,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 /* Greyscale a column on demand (right-click its header). */
 .is-greyscale, .is-greyscale-head { filter: grayscale(1); opacity: .92; }
 
-/* Cursor-anchored context menu (columns / colours). */
+/* Cursor-anchored context menu (columns / colors). */
 .popover--context { min-width: 190px; padding: 6px; }
 .ctx-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--nm-text-soft); font-weight: 600; padding: 6px 8px 4px; }
 .ctx-sep { height: 1px; background: var(--line-soft, rgba(156,165,178,.3)); margin: 5px 4px; }
@@ -753,7 +753,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .ctx-check svg { width: 14px; height: 14px; }
 .ctx-item:not(.is-on) .ctx-item__label { color: var(--nm-text-soft); }
 
-/* Colour picker grid. */
+/* Color picker grid. */
 .popover--colors { min-width: 168px; padding: 6px; }
 .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 4px; }
 .color-sw {
@@ -764,9 +764,9 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .color-sw:hover { transform: scale(1.12); }
 .color-sw.is-on { box-shadow: var(--nm-raised-sm), 0 0 0 2px var(--nm-base), 0 0 0 4px var(--nm-text, #3c4858); }
 
-/* Kanban cards + timeline bars carry the project colour too. High/critical
-   priority reads "filled" (bold accent + faint colour wash); lower priority
-   reads "outlined" (a slim colour stripe). */
+/* Kanban cards + timeline bars carry the project color too. High/critical
+   priority reads "filled" (bold accent + faint color wash); lower priority
+   reads "outlined" (a slim color stripe). */
 .kcard::before { background: var(--pjc); }
 .kcard--fill::before { opacity: 1; width: 5px; }
 .kcard--fill { box-shadow: var(--nm-raised-sm), inset 3px 0 0 var(--pjc); }
@@ -776,7 +776,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .gbar.is-late { box-shadow: 0 0 0 2px #b04e5b, var(--nm-raised-sm); }
 
 /* Whole-row tint: every neutral text element in a row takes the project's
-   colour (--pjc), so a row reads as one colour end to end. The late / due-soon
+   color (--pjc), so a row reads as one color end to end. The late / due-soon
    warning badges keep their red / amber — those are health signals, not
    identity, so they deliberately stay. */
 .row .cell__name { color: var(--pjc); }
@@ -785,7 +785,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .row .ms-chip__name { color: var(--pjc); }
 .row .ms-chip__date, .row .ms-chip__flag { color: var(--pjc); }
 .row .ms-chip--empty { color: var(--pjc); }
-/* Keep the warning colours winning where they apply. */
+/* Keep the warning colors winning where they apply. */
 .row .ms-chip.is-late .ms-chip__date, .row .ms-chip.is-late .ms-chip__flag { color: #b04e5b; }
 .row .ms-chip.is-soon .ms-chip__date { color: #b58234; }
 
@@ -850,7 +850,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .board.names-grey .row .cell__name { color: var(--nm-text-soft); }
 .board.names-dark .row .cell__name { color: var(--nm-text); }
 
-/* ---- Custom colour picker (neumorphic) ------------------------------------ */
+/* ---- Custom color picker (neumorphic) ------------------------------------ */
 .popover--colors { min-width: 216px; }
 .cp { display: flex; flex-direction: column; gap: 11px; padding: 8px 6px 4px; }
 .cp__area {
@@ -884,7 +884,7 @@ body { background: var(--nm-base); color: var(--nm-text); }
   border-radius: 10px; padding: 0 14px; box-shadow: var(--motion-lift-shadow);
 }
 
-/* ---- Project name as a solid colour chip ---------------------------------- */
+/* ---- Project name as a solid color chip ---------------------------------- */
 .board.names-chip .cell__name,
 .board.names-chip .cell__name:hover {
   background: var(--pjc);
