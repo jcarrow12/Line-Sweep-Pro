@@ -194,8 +194,20 @@
       groups: groups,
       projects: projects,
       settings: { atRiskDays: 3 },
-      columns: defaultColumns()
+      columns: defaultColumns(),
+      milestonePresets: defaultPresets()
     };
+  }
+
+  // Manager-defined milestone templates. `offset` = days from the project start.
+  function defaultPresets() {
+    return [
+      { id: uid('pst'), name: 'Kickoff', offset: 0 },
+      { id: uid('pst'), name: 'Design approved', offset: 7 },
+      { id: uid('pst'), name: 'First cut', offset: 14 },
+      { id: uid('pst'), name: 'Client review', offset: 21 },
+      { id: uid('pst'), name: 'Final delivery', offset: 30 }
+    ];
   }
 
   // ---- Store ----------------------------------------------------------------
@@ -240,6 +252,8 @@
         }
         // Spelling migration: the name-style token 'colour' became 'color'.
         if (saved.settings && saved.settings.nameStyle === 'colour') saved.settings.nameStyle = 'color';
+        // Milestone presets are a later addition.
+        if (!saved.milestonePresets) saved.milestonePresets = defaultPresets();
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -589,6 +603,41 @@
     },
 
     renameBoard: function (name) { state.board.name = name; emit({ type: 'board' }); },
+
+    setAtRiskDays: function (n) {
+      n = parseInt(n, 10);
+      if (isNaN(n) || n < 0) return;
+      state.settings.atRiskDays = n;
+      emit({ type: 'settings' });
+    },
+
+    // ---- Milestone presets ----
+    addPreset: function (name, offset) {
+      var pst = { id: uid('pst'), name: name || 'New preset', offset: parseInt(offset, 10) || 0 };
+      state.milestonePresets.push(pst);
+      emit({ type: 'presets' });
+      return pst;
+    },
+    updatePreset: function (id, patch) {
+      var pst = (state.milestonePresets || []).filter(function (x) { return x.id === id; })[0];
+      if (!pst) return;
+      if (patch.name != null) pst.name = patch.name;
+      if (patch.offset != null) { var o = parseInt(patch.offset, 10); pst.offset = isNaN(o) ? 0 : o; }
+      emit({ type: 'presets' });
+    },
+    removePreset: function (id) {
+      state.milestonePresets = (state.milestonePresets || []).filter(function (x) { return x.id !== id; });
+      emit({ type: 'presets' });
+    },
+
+    // Remove all completed (done) projects. Export first — this can't be undone.
+    completedProjects: function () { return state.projects.filter(function (p) { return p.status === 'done'; }); },
+    clearCompleted: function () {
+      var removed = state.projects.filter(function (p) { return p.status === 'done'; }).length;
+      state.projects = state.projects.filter(function (p) { return p.status !== 'done'; });
+      emit({ type: 'clear-completed' });
+      return removed;
+    },
 
     resetDemo: function () {
       state = seed();

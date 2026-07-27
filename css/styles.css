@@ -1085,3 +1085,38 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .pcard__actions { display: flex; gap: 8px; margin-top: 12px; }
 .pcard__actions .pcard__viewas { margin-top: 0; }
 .pcard__share { flex: 0 0 auto; width: auto; padding-left: 16px; padding-right: 16px; }
+
+/* ---- Settings gear (bottom of the rail) ----------------------------------- */
+.rail__btn--gear { margin-top: auto; }
+
+/* ---- Settings page -------------------------------------------------------- */
+.settings { max-width: 680px; display: flex; flex-direction: column; gap: 16px; }
+.settings__section { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); border-radius: 16px; padding: 18px 20px; }
+.settings__title { font-size: 14px; font-weight: 700; color: var(--nm-text); margin-bottom: 4px; }
+.settings__hint { font-size: 12.5px; color: var(--nm-text-soft); margin-bottom: 12px; line-height: 1.4; }
+.settings__inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.settings__unit { font-size: 13px; color: var(--nm-text-soft); }
+.settings__count { font-size: 13px; color: var(--nm-text-soft); margin-bottom: 12px; }
+.settings__add { margin-top: 10px; }
+.settings .input { max-width: 420px; }
+
+.preset-list { display: flex; flex-direction: column; gap: 8px; }
+.preset-row { display: grid; grid-template-columns: 1fr auto 30px; align-items: center; gap: 10px; }
+.preset-row__off { display: flex; align-items: center; gap: 6px; }
+.preset-row__del {
+  border: 0; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 18px; line-height: 1;
+  color: var(--nm-text-soft); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+}
+.preset-row__del:hover { color: #b04e5b; }
+
+/* Milestone preset quick-add chips in the project editor */
+.ms-presets { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+.ms-presets__label { font-size: 12px; color: var(--nm-text-soft); font-weight: 600; }
+.ms-presets__chip {
+  border: 0; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--nm-accent);
+  padding: 6px 11px; border-radius: 999px;
+  background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+.ms-presets__chip:hover { transform: translateY(-1px); }
+.ms-presets__chip:active { transform: scale(.96); }

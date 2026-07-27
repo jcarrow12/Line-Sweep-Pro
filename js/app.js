@@ -1747,6 +1747,113 @@
     });
   }
 
+  // ==========================================================================
+  //  SETTINGS
+  // ==========================================================================
+
+  function renderSettings() {
+    viewTitle.textContent = 'Settings';
+    viewSubtitle.textContent = 'Presets, preferences, and data';
+    var wrap = el('div', 'settings');
+
+    function section(title, hint) {
+      var s = el('div', 'settings__section');
+      s.appendChild(el('div', 'settings__title', { text: title }));
+      if (hint) s.appendChild(el('div', 'settings__hint', { text: hint }));
+      return s;
+    }
+
+    // ---- Board name ---------------------------------------------------------
+    var boardSec = section('Board name');
+    var boardIn = el('input', 'input', { type: 'text', value: S.state.board.name });
+    boardIn.addEventListener('change', function () { if (boardIn.value.trim()) S.renameBoard(boardIn.value.trim()); });
+    boardSec.appendChild(boardIn);
+    wrap.appendChild(boardSec);
+
+    // ---- At-risk window -----------------------------------------------------
+    var riskSec = section('“Due soon” window', 'Projects due within this many days are flagged as at-risk.');
+    var riskRow = el('div', 'settings__inline');
+    var riskIn = el('input', 'input input--sm', { type: 'number', min: '0', max: '60', value: S.state.settings.atRiskDays || 3 });
+    riskIn.style.width = '80px';
+    riskIn.addEventListener('change', function () { S.setAtRiskDays(riskIn.value); });
+    riskRow.appendChild(riskIn); riskRow.appendChild(el('span', 'settings__unit', { text: 'days' }));
+    riskSec.appendChild(riskRow);
+    wrap.appendChild(riskSec);
+
+    // ---- Milestone presets --------------------------------------------------
+    var presetSec = section('Milestone presets', 'Reusable milestones you can drop into any project. “Day” is days after the project’s start date.');
+    var list = el('div', 'preset-list');
+    (S.state.milestonePresets || []).forEach(function (pst) {
+      var row = el('div', 'preset-row');
+      var nameI = el('input', 'input input--sm', { type: 'text', value: pst.name });
+      nameI.addEventListener('change', function () { S.updatePreset(pst.id, { name: nameI.value }); });
+      var offWrap = el('div', 'preset-row__off');
+      offWrap.appendChild(el('span', 'settings__unit', { text: 'Day' }));
+      var offI = el('input', 'input input--sm', { type: 'number', value: pst.offset });
+      offI.style.width = '68px';
+      offI.addEventListener('change', function () { S.updatePreset(pst.id, { offset: offI.value }); });
+      offWrap.appendChild(offI);
+      var del = el('button', 'preset-row__del', { html: '&times;', title: 'Remove preset' });
+      del.addEventListener('click', function () { S.removePreset(pst.id); });
+      row.appendChild(nameI); row.appendChild(offWrap); row.appendChild(del);
+      list.appendChild(row);
+    });
+    presetSec.appendChild(list);
+    var addP = el('button', 'btn btn--soft settings__add', { text: '+ Add preset' });
+    addP.addEventListener('click', function () { S.addPreset('New milestone', 7); });
+    presetSec.appendChild(addP);
+    wrap.appendChild(presetSec);
+
+    // ---- Completed projects: archive + clear --------------------------------
+    var done = S.completedProjects();
+    var arcSec = section('Completed projects', 'Export a permanent archive, then clear finished projects out of the app.');
+    arcSec.appendChild(el('div', 'settings__count', { text: done.length + ' completed project' + (done.length === 1 ? '' : 's') }));
+    var arcRow = el('div', 'settings__inline');
+    var exp = el('button', 'btn btn--soft', { text: '⬇ Export archive (CSV + JSON)' });
+    exp.addEventListener('click', function () { exportArchive(done); });
+    if (!done.length) exp.disabled = true;
+    var clr = el('button', 'btn btn--ghost-danger', { text: 'Clear completed' });
+    if (!done.length) clr.disabled = true;
+    clr.addEventListener('click', function () {
+      if (!confirm('Remove all ' + done.length + ' completed projects from the app? Export the archive first — this cannot be undone.')) return;
+      exportArchive(done);
+      var n = S.clearCompleted();
+      toast('Archived and cleared ' + n + ' completed projects', 'success');
+    });
+    arcRow.appendChild(exp); arcRow.appendChild(clr);
+    arcSec.appendChild(arcRow);
+    wrap.appendChild(arcSec);
+
+    // ---- Danger: reset ------------------------------------------------------
+    var resetSec = section('Reset', 'Restore the original sample board. Wipes your data.');
+    var reset = el('button', 'btn btn--ghost-danger', { text: '↺ Reset to sample data' });
+    reset.addEventListener('click', function () { if (confirm('Reset all data back to the sample board? This cannot be undone.')) { S.resetDemo(); toast('Data reset', 'info'); } });
+    resetSec.appendChild(reset);
+    wrap.appendChild(resetSec);
+
+    clear(viewRoot);
+    viewRoot.appendChild(wrap);
+    M.stagger(wrap.querySelectorAll('.settings__section'), { step: 40, y: 12 });
+  }
+
+  // Export a full archive of completed projects (CSV for reading, JSON for
+  // re-import/records) before they're cleared.
+  function exportArchive(done) {
+    if (!done.length) { toast('No completed projects to archive', 'info'); return; }
+    var stamp = S.todayISO();
+    // CSV
+    var rows = [['Project', 'Team', 'Status', 'Priority', 'Group', 'Start', 'Due', 'Progress %', 'Milestones', 'Notes']];
+    done.forEach(function (p) {
+      var team = (p.assigneeIds || []).map(function (id) { return (S.personById(id) || {}).name; }).filter(Boolean).join('; ');
+      rows.push([p.name, team, S.statusMeta(p.status).label, S.priorityMeta(p.priority).label, (S.groupById(p.groupId) || {}).name || '', p.startDate, p.dueDate, p.progress, (p.milestones || []).length, p.notes || '']);
+    });
+    download('completed-archive-' + stamp + '.csv', 'text/csv', rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'));
+    // JSON (full fidelity, with the people referenced)
+    var payload = { exportedAt: new Date().toISOString(), projects: done, people: S.state.people };
+    download('completed-archive-' + stamp + '.json', 'application/json', JSON.stringify(payload, null, 2));
+    toast('Archive downloaded', 'success');
+  }
+
   function donut(st) {
     var wrap = el('div', 'donut-wrap');
     var SVGNS = 'http://www.w3.org/2000/svg';
@@ -1989,6 +2096,24 @@
     // Milestones editor
     var msField = el('div', 'field');
     msField.appendChild(el('label', 'field__label', { text: 'Milestones' }));
+
+    // Quick-add from the manager's presets (defined in Settings). Each adds a
+    // milestone dated from the project's start + the preset's day offset.
+    var presets = S.state.milestonePresets || [];
+    if (presets.length) {
+      var presetRow = el('div', 'ms-presets');
+      presetRow.appendChild(el('span', 'ms-presets__label', { text: 'Add preset:' }));
+      presets.forEach(function (pst) {
+        var chip = el('button', 'ms-presets__chip', { type: 'button', text: pst.name });
+        chip.addEventListener('click', function () {
+          p.milestones.push({ id: 'ms_' + Math.random().toString(36).slice(2, 8), name: pst.name, date: S.addDays(startInput.value || S.todayISO(), pst.offset || 0), done: false, assigneeId: null });
+          renderMsEditor();
+        });
+        presetRow.appendChild(chip);
+      });
+      msField.appendChild(presetRow);
+    }
+
     var msList = el('div', 'ms-editor');
     msField.appendChild(msList);
     // Pointer-based live reorder (Rundown style). The row that follows the
@@ -2224,7 +2349,7 @@
   //  Navigation & wiring
   // ==========================================================================
 
-  var VIEWS = { board: renderBoard, timeline: renderTimeline, kanban: renderKanban, people: renderPeople, dashboard: renderDashboard, reports: renderReports };
+  var VIEWS = { board: renderBoard, timeline: renderTimeline, kanban: renderKanban, people: renderPeople, dashboard: renderDashboard, reports: renderReports, settings: renderSettings };
 
   function navTo(view) {
     if (!VIEWS[view]) view = 'board';
@@ -2302,6 +2427,8 @@
       });
       var reports = el('button', 'menu-opt', { text: '📄  Reports' });
       reports.addEventListener('click', function () { closePopover(); navTo('reports'); });
+      var settingsOpt = el('button', 'menu-opt', { text: '⚙️  Settings' });
+      settingsOpt.addEventListener('click', function () { closePopover(); navTo('settings'); });
       var addP = el('button', 'menu-opt', { text: '👤  Add team member' });
       addP.addEventListener('click', function () {
         closePopover();
@@ -2318,7 +2445,7 @@
           S.resetDemo(); toast('Demo data reset', 'info');
         }
       });
-      pop.appendChild(reports); pop.appendChild(rename); pop.appendChild(addP); pop.appendChild(reset);
+      pop.appendChild(settingsOpt); pop.appendChild(reports); pop.appendChild(rename); pop.appendChild(addP); pop.appendChild(reset);
     });
   });
 
