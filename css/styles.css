@@ -1220,3 +1220,6 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .rem-item__proj { font-size: 11.5px; color: var(--nm-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rem-item__when { font-size: 12px; font-weight: 700; color: var(--nm-text-soft); white-space: nowrap; }
 .rem-item__when.is-soon { color: #b58234; } .rem-item__when.is-late { color: #b04e5b; }
+
+/* Settings: status/priority label+color rows (no count/delete column) */
+.cat-row--lc { grid-template-columns: 26px 1fr; }

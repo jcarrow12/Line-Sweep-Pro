@@ -1949,6 +1949,29 @@
     catSec.appendChild(addCat);
     wrap.appendChild(catSec);
 
+    // ---- Statuses & priorities ----------------------------------------------
+    function labelColorList(items, updateFn) {
+      var list = el('div', 'cat-list');
+      items.forEach(function (it) {
+        var row = el('div', 'cat-row cat-row--lc');
+        var dot = el('button', 'cat-row__dot', { title: 'Change color' });
+        dot.style.background = it.color;
+        dot.addEventListener('click', function () { openColorPopover(dot, it.color, function (hex) { updateFn(it.id, { color: hex }); }); });
+        var nameI = el('input', 'input input--sm', { type: 'text', value: it.label });
+        nameI.addEventListener('change', function () { if (nameI.value.trim()) updateFn(it.id, { label: nameI.value.trim() }); });
+        row.appendChild(dot); row.appendChild(nameI);
+        list.appendChild(row);
+      });
+      return list;
+    }
+    var stSec = section('Statuses', 'Rename or recolor your statuses to match how the department talks about work.');
+    stSec.appendChild(labelColorList(S.STATUSES, function (id, patch) { S.updateStatus(id, patch); }));
+    wrap.appendChild(stSec);
+
+    var prSec = section('Priorities', 'Rename or recolor the priority levels.');
+    prSec.appendChild(labelColorList(S.PRIORITIES, function (id, patch) { S.updatePriority(id, patch); }));
+    wrap.appendChild(prSec);
+
     // ---- Backup & restore ---------------------------------------------------
     var backupSec = section('Backup & restore', 'Everything lives on this device. Download a backup to keep it safe — or to move your board between your computers — and restore it here.');
     var backupRow = el('div', 'settings__inline');

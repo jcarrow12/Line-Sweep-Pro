@@ -195,9 +195,13 @@
       projects: projects,
       settings: { atRiskDays: 3, defaults: defaultProjectDefaults(), theme: 'auto', density: 'comfortable', reminders: { enabled: true, days: 7 } },
       columns: defaultColumns(),
-      milestonePresets: defaultPresets()
+      milestonePresets: defaultPresets(),
+      statuses: cloneList(STATUSES),
+      priorities: cloneList(PRIORITIES)
     };
   }
+
+  function cloneList(arr) { return arr.map(function (o) { return { id: o.id, label: o.label, color: o.color }; }); }
 
   // Defaults applied to a brand-new project. null group/owner = "the first one".
   function defaultProjectDefaults() {
@@ -266,6 +270,12 @@
         if (saved.settings && !saved.settings.density) saved.settings.density = 'comfortable';
         // Reminder prefs are a later addition.
         if (saved.settings && !saved.settings.reminders) saved.settings.reminders = { enabled: true, days: 7 };
+        // Customizable status/priority labels & colors are a later addition.
+        // Backfill from defaults, keeping ids fixed (logic depends on them).
+        if (!saved.statuses) saved.statuses = cloneList(STATUSES);
+        else STATUSES.forEach(function (d) { if (!saved.statuses.some(function (s) { return s.id === d.id; })) saved.statuses.push({ id: d.id, label: d.label, color: d.color }); });
+        if (!saved.priorities) saved.priorities = cloneList(PRIORITIES);
+        else PRIORITIES.forEach(function (d) { if (!saved.priorities.some(function (s) { return s.id === d.id; })) saved.priorities.push({ id: d.id, label: d.label, color: d.color }); });
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -288,8 +298,8 @@
   function personById(id) { return state.people.find(function (p) { return p.id === id; }); }
   function groupById(id) { return state.groups.find(function (g) { return g.id === id; }); }
   function projectById(id) { return state.projects.find(function (p) { return p.id === id; }); }
-  function statusMeta(id) { return STATUSES.find(function (s) { return s.id === id; }) || STATUSES[0]; }
-  function priorityMeta(id) { return PRIORITIES.find(function (p) { return p.id === id; }) || PRIORITIES[0]; }
+  function statusMeta(id) { var l = state.statuses || STATUSES; return l.filter(function (s) { return s.id === id; })[0] || l[0]; }
+  function priorityMeta(id) { var l = state.priorities || PRIORITIES; return l.filter(function (p) { return p.id === id; })[0] || l[0]; }
 
   function projectsInGroup(groupId) {
     return state.projects.filter(function (p) { return p.groupId === groupId; });
@@ -362,8 +372,8 @@
   // ---- Mutations ------------------------------------------------------------
 
   var Store = {
-    STATUSES: STATUSES,
-    PRIORITIES: PRIORITIES,
+    get STATUSES() { return state.statuses || STATUSES; },
+    get PRIORITIES() { return state.priorities || PRIORITIES; },
     AVATAR_COLORS: AVATAR_COLORS,
     PROJECT_COLORS: PROJECT_COLORS,
 
@@ -661,6 +671,22 @@
       if (!state.settings.reminders) state.settings.reminders = { enabled: true, days: 7 };
       Object.keys(patch).forEach(function (k) { state.settings.reminders[k] = patch[k]; });
       emit({ type: 'settings' });
+    },
+
+    // Rename / recolor a status or priority (ids stay fixed — logic depends on them).
+    updateStatus: function (id, patch) {
+      var s = (state.statuses || []).filter(function (x) { return x.id === id; })[0];
+      if (!s) return;
+      if (patch.label != null) s.label = patch.label;
+      if (patch.color != null) s.color = patch.color;
+      emit({ type: 'statuses' });
+    },
+    updatePriority: function (id, patch) {
+      var s = (state.priorities || []).filter(function (x) { return x.id === id; })[0];
+      if (!s) return;
+      if (patch.label != null) s.label = patch.label;
+      if (patch.color != null) s.color = patch.color;
+      emit({ type: 'priorities' });
     },
 
     // ---- Milestone presets ----
