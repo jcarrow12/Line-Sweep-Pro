@@ -1459,6 +1459,7 @@
   // ==========================================================================
 
   var reportState = null; // { preset, start, end, person }
+  var archiveRange = null; // { preset, start, end } for the completed-projects archive
 
   function reportRangeFor(preset) {
     function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
@@ -1804,21 +1805,50 @@
     presetSec.appendChild(addP);
     wrap.appendChild(presetSec);
 
-    // ---- Completed projects: archive + clear --------------------------------
-    var done = S.completedProjects();
-    var arcSec = section('Completed projects', 'Export a permanent archive, then clear finished projects out of the app.');
-    arcSec.appendChild(el('div', 'settings__count', { text: done.length + ' completed project' + (done.length === 1 ? '' : 's') }));
+    // ---- Completed projects: archive + clear (by date range) ----------------
+    if (!archiveRange) archiveRange = { preset: 'all', start: null, end: null };
+    var ar = archiveRange;
+    function inArchiveRange(p) { return ar.preset === 'all' ? true : (p.dueDate >= ar.start && p.dueDate <= ar.end); }
+    var done = S.completedProjects().filter(inArchiveRange);
+
+    var arcSec = section('Completed projects', 'Export a permanent archive, then clear finished projects out of the app. Filter by when they were due.');
+
+    var arRow = el('div', 'report__presets');
+    [['all', 'All time'], ['month', 'This month'], ['quarter', 'This quarter'], ['ytd', 'Year to date'], ['year', 'This year'], ['custom', 'Custom']].forEach(function (o) {
+      var b = el('button', 'tl-filter__chip' + (ar.preset === o[0] ? ' is-on' : ''), { text: o[1] });
+      b.addEventListener('click', function () {
+        ar.preset = o[0];
+        if (o[0] !== 'all' && o[0] !== 'custom') { var rr = reportRangeFor(o[0]); ar.start = rr.start; ar.end = rr.end; }
+        if (o[0] === 'custom' && !ar.start) { var y = new Date().getFullYear(); ar.start = y + '-01-01'; ar.end = y + '-12-31'; }
+        renderSettings();
+      });
+      arRow.appendChild(b);
+    });
+    arcSec.appendChild(arRow);
+
+    if (ar.preset === 'custom') {
+      var dts = el('div', 'settings__inline'); dts.style.marginTop = '10px';
+      var si = el('input', 'input input--sm input--date', { type: 'date', value: ar.start });
+      var ei = el('input', 'input input--sm input--date', { type: 'date', value: ar.end });
+      si.addEventListener('change', function () { ar.start = si.value || ar.start; renderSettings(); });
+      ei.addEventListener('change', function () { ar.end = ei.value || ar.end; renderSettings(); });
+      dts.appendChild(el('span', 'settings__unit', { text: 'From' })); dts.appendChild(si);
+      dts.appendChild(el('span', 'settings__unit', { text: 'to' })); dts.appendChild(ei);
+      arcSec.appendChild(dts);
+    }
+
+    arcSec.appendChild(el('div', 'settings__count', { text: done.length + ' completed project' + (done.length === 1 ? '' : 's') + (ar.preset === 'all' ? '' : ' in range') }));
     var arcRow = el('div', 'settings__inline');
     var exp = el('button', 'btn btn--soft', { text: '⬇ Export archive (CSV + JSON)' });
     exp.addEventListener('click', function () { exportArchive(done); });
     if (!done.length) exp.disabled = true;
-    var clr = el('button', 'btn btn--ghost-danger', { text: 'Clear completed' });
+    var clr = el('button', 'btn btn--ghost-danger', { text: 'Clear these completed' });
     if (!done.length) clr.disabled = true;
     clr.addEventListener('click', function () {
-      if (!confirm('Remove all ' + done.length + ' completed projects from the app? Export the archive first — this cannot be undone.')) return;
+      if (!confirm('Remove ' + done.length + ' completed project' + (done.length === 1 ? '' : 's') + ' from the app? The archive is exported first — this cannot be undone.')) return;
       exportArchive(done);
-      var n = S.clearCompleted();
-      toast('Archived and cleared ' + n + ' completed projects', 'success');
+      var n = S.clearProjectsByIds(done.map(function (p) { return p.id; }));
+      toast('Archived and cleared ' + n + ' completed project' + (n === 1 ? '' : 's'), 'success');
     });
     arcRow.appendChild(exp); arcRow.appendChild(clr);
     arcSec.appendChild(arcRow);

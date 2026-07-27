@@ -630,11 +630,19 @@
       emit({ type: 'presets' });
     },
 
-    // Remove all completed (done) projects. Export first — this can't be undone.
+    // Remove completed (done) projects. Export first — this can't be undone.
     completedProjects: function () { return state.projects.filter(function (p) { return p.status === 'done'; }); },
     clearCompleted: function () {
       var removed = state.projects.filter(function (p) { return p.status === 'done'; }).length;
       state.projects = state.projects.filter(function (p) { return p.status !== 'done'; });
+      emit({ type: 'clear-completed' });
+      return removed;
+    },
+    clearProjectsByIds: function (ids) {
+      var set = {};
+      (ids || []).forEach(function (id) { set[id] = 1; });
+      var removed = 0;
+      state.projects = state.projects.filter(function (p) { if (set[p.id]) { removed++; return false; } return true; });
       emit({ type: 'clear-completed' });
       return removed;
     },
