@@ -152,9 +152,12 @@
       requestAnimationFrame(frame);
     },
 
-    /* Modal: fade-and-settle over the slow speed (larger surface). */
+    /* Modal: fade-and-settle over the slow speed (larger surface).
+       The backdrop blur is static; only its tint layer fades (via the .is-open
+       class + a CSS transition), so we never animate opacity on the filtered
+       layer. Just the panel is animated here. */
     modalIn: function (panel, backdrop) {
-      animate(backdrop, [{ opacity: 0 }, { opacity: 1 }], { duration: DUR.base, easing: STANDARD, fill: 'both' });
+      if (backdrop) { backdrop.classList.remove('is-open'); void backdrop.offsetWidth; backdrop.classList.add('is-open'); }
       return animate(panel, [
         { opacity: 0, transform: 'translateY(10px) scale(0.99)' },
         { opacity: 1, transform: 'translateY(0) scale(1)' }
@@ -162,7 +165,7 @@
     },
 
     modalOut: function (panel, backdrop) {
-      animate(backdrop, [{ opacity: 1 }, { opacity: 0 }], { duration: DUR.fast, easing: STANDARD, fill: 'both' });
+      if (backdrop) backdrop.classList.remove('is-open');
       return animate(panel, [
         { opacity: 1, transform: 'translateY(0) scale(1)' },
         { opacity: 0, transform: 'translateY(6px) scale(0.995)' }

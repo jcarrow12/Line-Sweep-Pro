@@ -156,6 +156,8 @@ Not yet started, roughly in priority order:
 5. **Milestone dependencies and recurring projects.**
 6. **Push reminders** for upcoming milestone dates.
 7. **Cloud sync / multi-user** — would require a backend and auth. Large. Changes the product's character. Discuss before starting.
+   - **Shipped as a stopgap (no backend):** per-person sharing from the Team view — "Share…" exports a teammate's milestone calendar (`.ics`) and opens a printable, person-scoped report. Snapshot-based (re-send to update), zero infrastructure.
+   - **Intended future direction (Jeremy's call):** the department belongs to a company that already runs **SSO** (employees sign in to their computers/services with a corporate identity). Real multi-user should lean on that — teammates sign in via the company's SSO (SAML/OIDC — Okta / Entra / Google Workspace), no bespoke passwords. A client-side "password per sub-page" is **not** real security (the data ships to the browser; view-source exposes everything) — don't build fake auth; the backend + SSO is the real path.
 
 ---
 

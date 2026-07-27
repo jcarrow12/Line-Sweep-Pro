@@ -371,11 +371,19 @@ svg { display: block; }
 /* ===== Modal ============================================================== */
 .modal-host { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal-backdrop {
-  position: absolute; inset: 0; background: rgba(20,26,50,.5);
+  position: absolute; inset: 0; background: transparent;
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  /* Own compositor layer so the blur is rasterized once instead of every frame. */
-  will-change: opacity; transform: translateZ(0);
+  transform: translateZ(0);
 }
+/* The tint fades in on a SEPARATE, non-filtered layer. Never animate the opacity
+   of the blur layer itself — that re-rasterizes the whole-screen blur every
+   frame and is the source of the open stutter. The blur is static (sampled
+   once); only this cheap tint transitions. */
+.modal-backdrop::after {
+  content: ''; position: absolute; inset: 0; background: rgba(20,26,50,.5);
+  opacity: 0; transition: opacity var(--motion) var(--ease-standard);
+}
+.modal-backdrop.is-open::after { opacity: 1; }
 .modal { position: relative; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; will-change: transform, opacity; }
 .modal__head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line); }
 .modal__eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--blue); }
@@ -615,7 +623,8 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .modal__head, .modal__foot { border-color: var(--line-soft); background: transparent; }
 .modal__eyebrow { color: var(--nm-accent); }
 .modal__close { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); color: var(--nm-text); }
-.modal-backdrop { background: rgba(150,160,175,.42); }
+.modal-backdrop { background: transparent; }
+.modal-backdrop::after { background: rgba(150,160,175,.42); }
 
 /* ---- Popover ---- */
 .popover { background: var(--nm-base); background-image: var(--nm-grad); }
@@ -1071,3 +1080,8 @@ body { background: var(--nm-base); color: var(--nm-text); }
 }
 .pcard__done-toggle:hover { color: var(--nm-accent); }
 .pcard__proj--done .pcard__proj-name { text-decoration: line-through; color: var(--nm-text-soft); }
+
+/* Team card actions row (View board / Share) */
+.pcard__actions { display: flex; gap: 8px; margin-top: 12px; }
+.pcard__actions .pcard__viewas { margin-top: 0; }
+.pcard__share { flex: 0 0 auto; width: auto; padding-left: 16px; padding-right: 16px; }

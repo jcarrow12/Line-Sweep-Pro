@@ -1315,9 +1315,13 @@
         card.appendChild(doneWrap);
       }
 
-      var viewBtn = el('button', 'pcard__viewas', { text: 'View ' + person.name.split(' ')[0] + '’s board →' });
+      var actions = el('div', 'pcard__actions');
+      var viewBtn = el('button', 'pcard__viewas', { text: 'View ' + person.name.split(' ')[0] + '’s board' });
       viewBtn.addEventListener('click', function () { setViewAs(person.id); navTo('board'); });
-      card.appendChild(viewBtn);
+      var shareBtn = el('button', 'pcard__viewas pcard__share', { text: 'Share…' });
+      shareBtn.addEventListener('click', function () { openShareMenu(shareBtn, person); });
+      actions.appendChild(viewBtn); actions.appendChild(shareBtn);
+      card.appendChild(actions);
 
       grid.appendChild(card);
       cardEls.push(card);
@@ -1535,7 +1539,7 @@
     var csvBtn = el('button', 'btn btn--soft', { text: '⬇ CSV' });
     csvBtn.addEventListener('click', function () { exportCSV(projects, rs); });
     var icsBtn = el('button', 'btn btn--soft', { text: '⬇ Calendar (.ics)' });
-    icsBtn.addEventListener('click', function () { exportICS(msInRange, rs); });
+    icsBtn.addEventListener('click', function () { exportICS(msInRange, rs.start + '-to-' + rs.end); });
     var printBtn = el('button', 'btn btn--soft', { text: '🖨 Print' });
     printBtn.addEventListener('click', function () { window.print(); });
     exports.appendChild(csvBtn); exports.appendChild(icsBtn); exports.appendChild(printBtn);
@@ -1620,23 +1624,62 @@
     download('report-' + rs.start + '-to-' + rs.end + '.csv', 'text/csv', csv);
     toast('CSV downloaded', 'success');
   }
-  function exportICS(msInRange, rs) {
+  function exportICS(msList, label) {
     function dt(iso) { return iso.replace(/-/g, ''); }
     function esc(s) { return String(s || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n'); }
     var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Project Tracker//EN', 'CALSCALE:GREGORIAN'];
-    msInRange.forEach(function (x, i) {
-      var d = dt(x.milestone.date);
-      var end = dt(S.addDays(x.milestone.date, 1));
+    msList.forEach(function (x, i) {
       lines.push('BEGIN:VEVENT');
       lines.push('UID:ms-' + i + '-' + x.milestone.date + '@line-sweep-pro');
-      lines.push('DTSTART;VALUE=DATE:' + d);
-      lines.push('DTEND;VALUE=DATE:' + end);
+      lines.push('DTSTART;VALUE=DATE:' + dt(x.milestone.date));
+      lines.push('DTEND;VALUE=DATE:' + dt(S.addDays(x.milestone.date, 1)));
       lines.push('SUMMARY:' + esc(x.milestone.name + ' — ' + x.project.name));
       lines.push('END:VEVENT');
     });
     lines.push('END:VCALENDAR');
-    download('milestones-' + rs.start + '-to-' + rs.end + '.ics', 'text/calendar', lines.join('\r\n'));
+    download('milestones-' + (label || 'export') + '.ics', 'text/calendar', lines.join('\r\n'));
     toast('Calendar file downloaded', 'success');
+  }
+
+  // All of a person's dated milestones (their own + project-wide) across the
+  // projects they're on — used for the per-person share.
+  function personMilestones(person) {
+    var out = [];
+    S.state.projects.forEach(function (p) {
+      if ((p.assigneeIds || []).indexOf(person.id) === -1) return;
+      (p.milestones || []).forEach(function (m) {
+        if (!m.assigneeId || m.assigneeId === person.id) out.push({ project: p, milestone: m });
+      });
+    });
+    out.sort(function (a, b) { return a.milestone.date < b.milestone.date ? -1 : 1; });
+    return out;
+  }
+
+  // Per-person share: email them their calendar or open a printable report.
+  function openShareMenu(anchor, person) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--menu');
+      pop.appendChild(el('div', 'popover__label', { text: 'Share with ' + person.name.split(' ')[0] }));
+      var ical = el('button', 'menu-opt', { text: '📅  Download their calendar (.ics)' });
+      ical.addEventListener('click', function () {
+        var ms = personMilestones(person);
+        if (!ms.length) { toast('No dated milestones for ' + person.name.split(' ')[0], 'info'); closePopover(); return; }
+        exportICS(ms, person.name.replace(/\s+/g, '-').toLowerCase());
+        closePopover();
+      });
+      var rep = el('button', 'menu-opt', { text: '📄  Open printable report' });
+      rep.addEventListener('click', function () {
+        var ps = S.state.projects.filter(function (p) { return (p.assigneeIds || []).indexOf(person.id) !== -1; });
+        var start = null, end = null;
+        ps.forEach(function (p) { if (!start || p.startDate < start) start = p.startDate; if (!end || p.dueDate > end) end = p.dueDate; });
+        var y = new Date().getFullYear();
+        reportState = { preset: 'custom', start: start || (y + '-01-01'), end: end || (y + '-12-31'), person: person.id };
+        closePopover();
+        navTo('reports');
+        toast('Report scoped to ' + person.name.split(' ')[0] + ' — use Print to save a PDF', 'info');
+      });
+      pop.appendChild(ical); pop.appendChild(rep);
+    });
   }
 
   function donut(st) {
