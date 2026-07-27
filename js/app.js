@@ -977,13 +977,33 @@
     msField.appendChild(el('label', 'field__label', { text: 'Milestones' }));
     var msList = el('div', 'ms-editor');
     msField.appendChild(msList);
-    // Pointer-based live reorder (Rundown style): the dragged row follows the
-    // pointer, the other rows slide to open a gap, everything settles on release.
-    // Nothing is rebuilt mid-drag — pure transforms — so it stays smooth.
+    // Pointer-based live reorder (Rundown style). The row that follows the
+    // pointer every frame is a LIGHTWEIGHT text proxy (no native select/date
+    // inputs), so the continuous motion is trivially smooth. The real row hides;
+    // the others part to open the gap (they move only on threshold crossings);
+    // everything settles on release.
     (function initSortable() {
       var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-      var dragEl = null, rows = [], origIndex = 0, step = 0, startY = 0, target = 0, capHandle = null, capId = null, backdrop = null;
+      var dragEl = null, proxy = null, rows = [], origIndex = 0, step = 0, startY = 0, target = 0,
+          capHandle = null, capId = null, backdrop = null;
       function rowEls() { return Array.prototype.slice.call(msList.querySelectorAll('.ms-editor__row')); }
+
+      function buildProxy(row) {
+        var mid = row.getAttribute('data-msid'), mObj = null;
+        for (var i = 0; i < p.milestones.length; i++) { if (p.milestones[i].id === mid) { mObj = p.milestones[i]; break; } }
+        var r = row.getBoundingClientRect();
+        var px = el('div', 'ms-editor__row ms-editor__proxy m-lift');
+        px.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width +
+          'px;height:' + r.height + 'px;margin:0;z-index:600;pointer-events:none;will-change:transform;';
+        px.appendChild(el('span', 'ms-editor__handle', { html: gripSVG() }));
+        px.appendChild(el('span', 'ms-editor__proxy-chk' + (mObj && mObj.done ? ' is-on' : ''), { html: (mObj && mObj.done) ? checkSVG() : '' }));
+        px.appendChild(el('span', 'ms-editor__proxy-name', { text: (mObj && mObj.name) || 'Milestone' }));
+        px.appendChild(el('span', 'ms-editor__proxy-date', { text: mObj ? fmtDate(mObj.date) : '' }));
+        var whoTxt = 'Everyone';
+        if (mObj && mObj.assigneeId) { var per = S.personById(mObj.assigneeId); if (per) whoTxt = per.name.split(' ')[0]; }
+        px.appendChild(el('span', 'ms-editor__proxy-who', { text: whoTxt }));
+        return px;
+      }
 
       msList.addEventListener('pointerdown', function (e) {
         var handle = e.target && e.target.closest ? e.target.closest('.ms-editor__handle') : null;
@@ -997,12 +1017,12 @@
           : row.getBoundingClientRect().height + 8) || 44;
         capHandle = handle; capId = e.pointerId;
         try { handle.setPointerCapture(capId); } catch (err) {}
-        row.classList.add('m-lift'); row.style.transition = 'none'; row.style.zIndex = '5';
+        proxy = buildProxy(row);
+        document.body.appendChild(proxy);
+        row.style.visibility = 'hidden';         // real row keeps its slot (the moving gap)
         rows.forEach(function (r) { if (r !== row) r.style.transition = 'transform var(--motion) ' + SETTLE; });
         document.body.style.userSelect = 'none';
-        // Promote rows to their own GPU layers (their native selects/date inputs
-        // repaint every frame otherwise) and drop the costly backdrop blur.
-        msList.classList.add('is-sorting');
+        msList.classList.add('is-sorting');       // layer-promote the parting rows
         backdrop = modalHost.querySelector('.modal-backdrop');
         if (backdrop) backdrop.classList.add('is-static');
         handle.addEventListener('pointermove', onMove);
@@ -1013,7 +1033,7 @@
       function onMove(e) {
         if (!dragEl) return;
         var dy = e.clientY - startY;
-        dragEl.style.transform = 'translateY(' + dy + 'px) scale(1.02)';
+        proxy.style.transform = 'translateY(' + dy + 'px) scale(1.02)';   // cheap: text only
         var t = Math.max(0, Math.min(rows.length - 1, origIndex + Math.round(dy / step)));
         if (t === target) return;
         target = t;
@@ -1028,7 +1048,7 @@
 
       function onUp() {
         if (!dragEl) return;
-        var el = dragEl, from = origIndex, to = target;
+        var el2 = dragEl, from = origIndex, to = target;
         if (capHandle) {
           capHandle.removeEventListener('pointermove', onMove);
           capHandle.removeEventListener('pointerup', onUp);
@@ -1036,14 +1056,16 @@
           try { capHandle.releasePointerCapture(capId); } catch (err) {}
         }
         document.body.style.userSelect = '';
-        // Capture current visual positions (drag/gap transforms still applied),
-        // then commit the new order and settle every row into place with a FLIP.
-        var firstTop = rows.map(function (r) { return r.getBoundingClientRect().top; });
+        // Old positions: the proxy for the dragged row, current spot for the rest.
+        var proxyTop = proxy ? proxy.getBoundingClientRect().top : 0;
+        var firstTop = rows.map(function (r) { return r === el2 ? proxyTop : r.getBoundingClientRect().top; });
         rows.forEach(function (r) { r.style.transition = ''; r.style.transform = ''; });
-        el.classList.remove('m-lift'); el.style.zIndex = '';
+        el2.style.visibility = '';
+        if (proxy && proxy.parentNode) proxy.parentNode.removeChild(proxy);
+        proxy = null;
         if (to !== from) {
           var addBtn = msList.querySelector('.ms-editor__add');
-          var order = rows.slice(); order.splice(from, 1); order.splice(to, 0, el);
+          var order = rows.slice(); order.splice(from, 1); order.splice(to, 0, el2);
           order.forEach(function (r) { msList.insertBefore(r, addBtn); });
           var moved = p.milestones.splice(from, 1)[0];
           p.milestones.splice(to, 0, moved);
@@ -1051,18 +1073,13 @@
         if (!M.reduced) {
           rows.forEach(function (r, i) {
             var dy = firstTop[i] - r.getBoundingClientRect().top;
-            var fromT = (r === el) ? 'translateY(' + dy + 'px) scale(1.02)' : 'translateY(' + dy + 'px)';
-            if (r !== el && Math.abs(dy) < 0.5) return;
-            r.animate([{ transform: fromT }, { transform: 'none' }],
+            if (r !== el2 && Math.abs(dy) < 0.5) return;
+            r.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }],
               { duration: 190, easing: SETTLE });
           });
         }
-        // Restore the blur + drop the GPU layers once the settle has finished.
         var bd = backdrop;
-        setTimeout(function () {
-          msList.classList.remove('is-sorting');
-          if (bd) bd.classList.remove('is-static');
-        }, 240);
+        setTimeout(function () { msList.classList.remove('is-sorting'); if (bd) bd.classList.remove('is-static'); }, 240);
         dragEl = null; rows = []; capHandle = null; backdrop = null;
       }
     })();
