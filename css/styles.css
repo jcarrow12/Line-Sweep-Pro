@@ -872,16 +872,16 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .cp__preview { width: 28px; height: 28px; border-radius: 9px; box-shadow: var(--nm-raised-sm); flex: none; }
 .cp__hex { flex: 1; text-transform: uppercase; letter-spacing: .04em; }
 
-/* ---- Reorder columns (grab a header and drag) ----------------------------- */
+/* ---- Reorder columns (grab a header and drag the whole column) ------------- */
 .row--header { user-select: none; -webkit-user-select: none; }
 .cell--head.is-draggable { cursor: grab; }
 .cell--head.is-draggable:active { cursor: grabbing; }
-.cell--head--proxy {
-  display: flex; align-items: center;
-  font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600;
-  color: var(--nm-text, var(--ink-soft));
-  background: var(--nm-base); background-image: var(--nm-grad);
-  border-radius: 10px; padding: 0 14px; box-shadow: var(--motion-lift-shadow);
+/* Every cell of the column being dragged lifts above its neighbours and gets an
+   opaque base + side shadows, so the column reads as one solid moving band. */
+.row .cell.is-col-dragging {
+  position: relative; z-index: 6; will-change: transform;
+  background: var(--nm-base);
+  box-shadow: 10px 0 22px -12px rgba(60,72,110,.32), -10px 0 22px -12px rgba(60,72,110,.32);
 }
 
 /* ---- Project name as a solid color chip ---------------------------------- */

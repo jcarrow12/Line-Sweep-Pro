@@ -588,78 +588,78 @@
     }
   }
 
-  // A stable identity for a board cell across a re-render, so column-reorder can
-  // FLIP each cell from its old spot to its new one. Header cells key by group +
-  // column; data cells key by project + column-class.
-  function cellKey(c) {
-    var row = c.closest ? c.closest('.row') : null;
-    if (!row) return null;
-    var m = /cell--(\w+)/.exec(c.className);
-    var ck = m ? m[1] : (c.getAttribute('data-colkey') || 'x');
-    if (row.classList.contains('row--header')) {
-      var sec = c.closest('.group'); var gid = sec ? sec.getAttribute('data-group') : '';
-      var hk = c.getAttribute('data-colkey') || 'project';
-      return 'H:' + gid + ':' + hk;
-    }
-    var pid = row.getAttribute('data-project');
-    return pid ? 'R:' + pid + ':' + ck : null;
-  }
-
-  // Grab a column header and drag to reorder the columns — same feel as the
-  // milestone reorder: a lightweight proxy follows the pointer, the other head
-  // cells part to open a gap, and the whole board settles (FLIP) into the new
-  // order on release.
+  // Grab a column header and drag to reorder the columns. The WHOLE column —
+  // header plus every cell beneath it — moves with the pointer; the other
+  // columns part to open a gap; on release the column settles into its slot with
+  // the house curve. Because the real cells are already in place when the store
+  // commits, the re-render is invisible (no page redraw).
   function initColumnSort(header) {
     var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
     header.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
       var cell = e.target && e.target.closest ? e.target.closest('.cell--head.is-draggable') : null;
       if (!cell) return;
-      var cells = Array.prototype.slice.call(header.querySelectorAll('.cell--head.is-draggable'));
-      var origIndex = cells.indexOf(cell);
-      if (origIndex === -1 || cells.length < 2) return;
+      var headCells = Array.prototype.slice.call(header.querySelectorAll('.cell--head.is-draggable'));
+      var origIndex = headCells.indexOf(cell);
+      if (origIndex === -1 || headCells.length < 2) return;
+      var n = headCells.length;
+      var board = header.closest('.board');
 
-      var startX = e.clientX, activated = false, proxy = null, capId = e.pointerId;
-      var W = [], L0 = [], baseLeft = 0, target = origIndex;
+      var startX = e.clientX, activated = false, capId = e.pointerId, target = origIndex;
+      var W = [], L0 = [], baseLeft = 0, rows = [];
       try { cell.setPointerCapture(capId); } catch (err) {}
+
+      // Cell for column j in a given row (+1 skips the fixed Project name cell).
+      function colCell(row, j) { return row.children[j + 1]; }
 
       function activate() {
         activated = true;
-        W = cells.map(function (c) { return c.getBoundingClientRect().width; });
-        L0 = cells.map(function (c) { return c.getBoundingClientRect().left; });
+        W = headCells.map(function (c) { return c.getBoundingClientRect().width; });
+        L0 = headCells.map(function (c) { return c.getBoundingClientRect().left; });
         baseLeft = L0[0];
-        var r = cell.getBoundingClientRect();
-        proxy = cell.cloneNode(true);
-        proxy.classList.add('cell--head--proxy', 'm-lift');
-        proxy.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' +
-          r.width + 'px;height:' + r.height + 'px;margin:0;z-index:600;pointer-events:none;';
-        document.body.appendChild(proxy);
-        cell.style.visibility = 'hidden';
-        cells.forEach(function (c, i) { if (i !== origIndex) c.style.transition = 'transform var(--motion) ' + SETTLE; });
+        // Every board row with per-column cells (headers + data rows, not add-rows).
+        rows = Array.prototype.slice.call(board.querySelectorAll('.row')).filter(function (r) {
+          return !r.classList.contains('row--add');
+        });
+        rows.forEach(function (r) {
+          for (var j = 0; j < n; j++) {
+            var cc = colCell(r, j); if (!cc) continue;
+            if (j === origIndex) cc.classList.add('is-col-dragging');
+            else cc.style.transition = 'transform var(--motion) ' + SETTLE;
+          }
+        });
       }
       function newLefts(t) {
         var order = [];
-        for (var i = 0; i < cells.length; i++) if (i !== origIndex) order.push(i);
+        for (var i = 0; i < n; i++) if (i !== origIndex) order.push(i);
         order.splice(t, 0, origIndex);
-        var x = baseLeft, nl = new Array(cells.length);
+        var x = baseLeft, nl = new Array(n);
         order.forEach(function (idx) { nl[idx] = x; x += W[idx]; });
         return nl;
       }
-      function layout() {
+      function moveDragged(dx) {
+        rows.forEach(function (r) { var cc = colCell(r, origIndex); if (cc) cc.style.transform = 'translateX(' + dx + 'px)'; });
+      }
+      function partOthers() {
         var nl = newLefts(target);
-        for (var i = 0; i < cells.length; i++) { if (i === origIndex) continue; cells[i].style.transform = 'translateX(' + (nl[i] - L0[i]) + 'px)'; }
+        rows.forEach(function (r) {
+          for (var j = 0; j < n; j++) {
+            if (j === origIndex) continue;
+            var cc = colCell(r, j); if (cc) cc.style.transform = 'translateX(' + (nl[j] - L0[j]) + 'px)';
+          }
+        });
       }
       function computeTarget(dx) {
-        var proxyCenter = L0[origIndex] + W[origIndex] / 2 + dx, insertAt = 0;
-        for (var i = 0; i < cells.length; i++) { if (i === origIndex) continue; if (L0[i] + W[i] / 2 < proxyCenter) insertAt++; }
+        var center = L0[origIndex] + W[origIndex] / 2 + dx, insertAt = 0;
+        for (var i = 0; i < n; i++) { if (i === origIndex) continue; if (L0[i] + W[i] / 2 < center) insertAt++; }
         return insertAt;
       }
       function onMove(ev) {
         var dx = ev.clientX - startX;
-        if (!activated) { if (Math.abs(dx) < 4) return; activate(); }
-        proxy.style.transform = 'translateX(' + dx + 'px)';
+        if (!activated) { if (Math.abs(dx) < 4) return; activate(); partOthers(); }
+        moveDragged(dx);
         var t = computeTarget(dx);
-        if (t !== target) { target = t; layout(); }
+        if (t !== target) { target = t; partOthers(); }
       }
       function onUp(ev) {
         document.removeEventListener('pointermove', onMove, true);
@@ -667,36 +667,27 @@
         try { cell.releasePointerCapture(capId); } catch (err) {}
         if (!activated) return;
         var order = [];
-        for (var i = 0; i < cells.length; i++) if (i !== origIndex) order.push(i);
+        for (var i = 0; i < n; i++) if (i !== origIndex) order.push(i);
         order.splice(target, 0, origIndex);
-        var keys = order.map(function (idx) { return cells[idx].getAttribute('data-colkey'); });
+        var keys = order.map(function (idx) { return headCells[idx].getAttribute('data-colkey'); });
+        var to = newLefts(target)[origIndex] - L0[origIndex];
+        var dx = ev.clientX - startX;
 
-        // FLIP: capture where every board cell sits now, commit the reorder
-        // (which re-renders in the new order), then glide each cell from its old
-        // position to its new one with the house settle — so the whole board
-        // eases into place instead of snapping.
-        var first = {};
-        Array.prototype.forEach.call(viewRoot.querySelectorAll('.row .cell'), function (c) {
-          var k = cellKey(c); if (k) first[k] = c.getBoundingClientRect();
+        // Settle the dragged column from the pointer to its final slot, then
+        // commit. The parted columns are already at their final spots, so once
+        // the store re-renders in the new order nothing visibly moves.
+        var pending = 0, done = false;
+        function commit() { if (done) return; done = true; skipRowStagger = true; S.reorderColumns(keys); }
+        rows.forEach(function (r) {
+          var cc = colCell(r, origIndex); if (!cc) return;
+          pending++;
+          var a = cc.animate(
+            [{ transform: 'translateX(' + dx + 'px)' }, { transform: 'translateX(' + to + 'px)' }],
+            { duration: 300, easing: SETTLE, fill: 'forwards' });
+          function fin() { if (--pending <= 0) commit(); }
+          a.finished.then(fin).catch(fin);
         });
-        // The dragged header should glide from where it was dropped, not its old slot.
-        var draggedKey = cellKey(cell);
-        if (draggedKey && proxy) first[draggedKey] = proxy.getBoundingClientRect();
-        if (proxy) { proxy.remove(); proxy = null; }
-
-        skipRowStagger = true;
-        S.reorderColumns(keys); // re-renders the board in the new order
-
-        requestAnimationFrame(function () {
-          Array.prototype.forEach.call(viewRoot.querySelectorAll('.row .cell'), function (c) {
-            var k = cellKey(c); if (!k || !first[k]) return;
-            var last = c.getBoundingClientRect();
-            var dx = first[k].left - last.left, dy = first[k].top - last.top;
-            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-            c.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'none' }],
-              { duration: 340, easing: SETTLE });
-          });
-        });
+        if (pending === 0) commit();
       }
       document.addEventListener('pointermove', onMove, true);
       document.addEventListener('pointerup', onUp, true);
