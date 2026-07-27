@@ -651,6 +651,30 @@
       state = seed();
       persist();
       emit({ type: 'reset' });
+    },
+
+    // Replace the whole board from a backup file. Validates the essentials and
+    // backfills any newer fields the backup predates.
+    importState: function (obj) {
+      if (!obj || !Array.isArray(obj.projects) || !Array.isArray(obj.people)) return false;
+      if (!obj.board) obj.board = { id: uid('brd'), name: 'Projects' };
+      if (!obj.groups) obj.groups = [];
+      if (!obj.settings) obj.settings = { atRiskDays: 3 };
+      if (!obj.columns) obj.columns = defaultColumns();
+      if (!obj.milestonePresets) obj.milestonePresets = defaultPresets();
+      obj.people.forEach(function (person, i) {
+        if (!person.color) person.color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+        if (!person.initials) person.initials = initials(person.name || '?');
+      });
+      obj.projects.forEach(function (p, i) {
+        if (!p.assigneeIds || !p.assigneeIds.length) p.assigneeIds = p.ownerId ? [p.ownerId] : [];
+        if (!p.color) p.color = PROJECT_COLORS[i % PROJECT_COLORS.length];
+        if (!p.milestones) p.milestones = [];
+      });
+      state = obj;
+      persist();
+      emit({ type: 'import' });
+      return true;
     }
   };
 

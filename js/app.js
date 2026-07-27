@@ -1805,6 +1805,36 @@
     presetSec.appendChild(addP);
     wrap.appendChild(presetSec);
 
+    // ---- Backup & restore ---------------------------------------------------
+    var backupSec = section('Backup & restore', 'Everything lives on this device. Download a backup to keep it safe — or to move your board between your computers — and restore it here.');
+    var backupRow = el('div', 'settings__inline');
+    var dl = el('button', 'btn btn--soft', { text: '⬇ Download backup' });
+    dl.addEventListener('click', function () {
+      download('board-backup-' + S.todayISO() + '.json', 'application/json', JSON.stringify(S.state, null, 2));
+      toast('Backup downloaded', 'success');
+    });
+    var restore = el('button', 'btn btn--soft', { text: '⬆ Restore from backup' });
+    var fileIn = el('input', null, { type: 'file', accept: '.json,application/json' });
+    fileIn.style.display = 'none';
+    restore.addEventListener('click', function () { fileIn.click(); });
+    fileIn.addEventListener('change', function () {
+      var f = fileIn.files && fileIn.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var obj;
+        try { obj = JSON.parse(reader.result); } catch (e) { toast('That file isn’t a valid backup', 'info'); return; }
+        if (!confirm('Replace ALL current data with this backup? Your current board will be overwritten.')) { fileIn.value = ''; return; }
+        if (S.importState(obj)) { toast('Backup restored', 'success'); navTo('board'); }
+        else { toast('That file isn’t a valid backup', 'info'); }
+        fileIn.value = '';
+      };
+      reader.readAsText(f);
+    });
+    backupRow.appendChild(dl); backupRow.appendChild(restore); backupRow.appendChild(fileIn);
+    backupSec.appendChild(backupRow);
+    wrap.appendChild(backupSec);
+
     // ---- Completed projects: archive + clear (by date range) ----------------
     if (!archiveRange) archiveRange = { preset: 'all', start: null, end: null };
     var ar = archiveRange;
