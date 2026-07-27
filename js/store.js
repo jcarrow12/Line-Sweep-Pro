@@ -402,6 +402,27 @@
       return p;
     },
 
+    // Change status, optionally recording a timestamped "why" note. Notes are
+    // kept as a log; the most recent is surfaced on the board.
+    changeStatus: function (id, status, note) {
+      var p = projectById(id);
+      if (!p) return;
+      var from = p.status;
+      p.status = status;
+      if (status === 'done') p.progress = 100;
+      if (note && note.trim()) {
+        if (!p.statusLog) p.statusLog = [];
+        p.statusLog.push({ status: status, note: note.trim(), at: new Date().toISOString(), from: from });
+      }
+      emit({ type: 'update', id: id, field: 'status' });
+      return p;
+    },
+
+    latestStatusNote: function (p) {
+      var l = p && p.statusLog;
+      return (l && l.length) ? l[l.length - 1] : null;
+    },
+
     deleteProject: function (id) {
       state.projects = state.projects.filter(function (p) { return p.id !== id; });
       emit({ type: 'delete', id: id });

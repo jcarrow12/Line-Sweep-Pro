@@ -915,3 +915,27 @@ body { background: var(--nm-base); color: var(--nm-text); }
 }
 /* Give the grip room so it doesn't sit under the name text. */
 .cell--name { padding-left: 22px; }
+
+/* ---- Status-change notes -------------------------------------------------- */
+.cell--status { position: relative; }
+.status-note {
+  position: absolute; top: 3px; right: 8px; width: 18px; height: 18px; padding: 0;
+  border: 0; border-radius: 50%; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--nm-base); background-image: var(--nm-grad);
+  box-shadow: var(--nm-raised-sm); color: var(--nm-accent, #4f77ae);
+}
+.status-note svg { width: 11px; height: 11px; }
+.status-note:hover { transform: translateY(-1px); }
+
+/* Note-entry step in the status popover */
+.popover--note { min-width: 240px; padding: 12px; }
+.popover--note .input--area { width: 100%; margin: 8px 0 10px; }
+.note-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.note-actions .btn { padding: 8px 14px; }
+
+/* Read a saved note */
+.popover--noteview { min-width: 220px; max-width: 300px; padding: 12px; }
+.noteview__head { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--nm-text-soft); margin-bottom: 7px; }
+.noteview__dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.noteview__body { font-size: 13.5px; color: var(--nm-text); line-height: 1.45; white-space: pre-wrap; }

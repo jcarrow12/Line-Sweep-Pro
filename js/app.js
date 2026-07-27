@@ -148,11 +148,49 @@
         var opt = el('button', 'swatch', { text: s.label });
         opt.style.background = s.color;
         opt.addEventListener('click', function () {
-          S.updateProject(project.id, { status: s.id }, { field: 'status' });
-          closePopover();
+          // Blocked / paused statuses invite a "why" note; others apply straight.
+          if (s.id === 'stuck' || s.id === 'on_hold') statusNoteStep(pop, anchor, project, s);
+          else { S.changeStatus(project.id, s.id, ''); closePopover(); }
         });
         pop.appendChild(opt);
       });
+    });
+  }
+
+  // Second step of the status menu: an optional note explaining the change.
+  function statusNoteStep(pop, anchor, project, s) {
+    clear(pop);
+    pop.classList.remove('popover--swatches');
+    pop.classList.add('popover--note');
+    pop.appendChild(el('div', 'popover__label', { text: s.id === 'stuck' ? 'Why is it stuck? (optional)' : 'Why on hold? (optional)' }));
+    var ta = el('textarea', 'input input--area', { rows: '3', placeholder: 'Add a note…' });
+    var prev = (project.statusLog || []).slice().reverse().filter(function (e) { return e.status === s.id; })[0];
+    if (prev) ta.value = prev.note;
+    pop.appendChild(ta);
+    var acts = el('div', 'note-actions');
+    var skip = el('button', 'btn btn--soft', { text: 'Skip', onclick: function () { S.changeStatus(project.id, s.id, ''); closePopover(); } });
+    var save = el('button', 'btn btn--primary', { text: 'Save', onclick: function () { S.changeStatus(project.id, s.id, ta.value); closePopover(); } });
+    acts.appendChild(skip); acts.appendChild(save);
+    pop.appendChild(acts);
+    // Re-clamp vertical position now that the popover is taller.
+    requestAnimationFrame(function () {
+      var ph = pop.offsetHeight, top = parseFloat(pop.style.top) || 0;
+      if (top + ph > window.innerHeight - 8) pop.style.top = Math.max(8, window.innerHeight - ph - 8) + 'px';
+    });
+    setTimeout(function () { ta.focus(); }, 30);
+  }
+
+  // Read a project's most recent status note.
+  function openNoteView(anchor, project, ln) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--noteview');
+      var meta = S.statusMeta(ln.status);
+      var head = el('div', 'noteview__head');
+      var swatch = el('span', 'noteview__dot'); swatch.style.background = meta.color;
+      head.appendChild(swatch);
+      head.appendChild(el('span', null, { text: meta.label + ' · ' + fmtDateFull(ln.at.slice(0, 10)) }));
+      pop.appendChild(head);
+      pop.appendChild(el('div', 'noteview__body', { text: ln.note }));
     });
   }
 
@@ -798,6 +836,16 @@
       var sp = statusPill(p);
       sp.addEventListener('click', function (e) { e.stopPropagation(); openStatusMenu(sp, p); });
       stCell.appendChild(sp);
+      var ln = S.latestStatusNote(p);
+      if (ln) {
+        var meta = S.statusMeta(ln.status);
+        var nb = el('button', 'status-note', {
+          html: noteSVG(),
+          title: meta.label + ': ' + ln.note + ' · ' + fmtDate(ln.at.slice(0, 10))
+        });
+        nb.addEventListener('click', function (e) { e.stopPropagation(); openNoteView(nb, p, ln); });
+        stCell.appendChild(nb);
+      }
       return stCell;
     }
     if (key === 'timeline') {
@@ -1819,6 +1867,7 @@
   function gripSVG() { return '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>'; }
   function flagSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3v18M6 4h11l-2 4 2 4H6" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'; }
   function layoutSVG() { return '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>'; }
+  function noteSVG() { return '<svg viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 011 1v10a1 1 0 01-1 1H9l-4 4V5a1 1 0 011-1z" fill="currentColor"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function alertSVG() { return '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }
