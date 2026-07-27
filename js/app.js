@@ -249,7 +249,7 @@
       } else {
         pop.appendChild(el('div', 'ctx-label', { text: 'Project names' }));
         var cur = (S.state.settings && S.state.settings.nameStyle) || 'colour';
-        [['colour', 'Project colour'], ['grey', 'Greyscale'], ['dark', 'Dark greyscale']].forEach(function (o) {
+        [['colour', 'Project colour'], ['chip', 'Colour chip'], ['grey', 'Greyscale'], ['dark', 'Dark greyscale']].forEach(function (o) {
           var item = el('button', 'ctx-item ctx-item--check' + (cur === o[0] ? ' is-on' : ''));
           item.appendChild(el('span', 'ctx-check', { html: cur === o[0] ? checkSVG() : '' }));
           item.appendChild(el('span', 'ctx-item__label', { text: o[1] }));
@@ -427,6 +427,7 @@
     var nameStyle = (S.state.settings && S.state.settings.nameStyle) || 'colour';
     if (nameStyle === 'grey') root.classList.add('names-grey');
     else if (nameStyle === 'dark') root.classList.add('names-dark');
+    else if (nameStyle === 'chip') root.classList.add('names-chip');
     // Build the grid track list from the visible columns (name column fixed).
     var cols = S.visibleColumns();
     root.style.setProperty('--cols', 'minmax(200px,2.2fr) ' + cols.map(function (c) { return c.width; }).join(' '));

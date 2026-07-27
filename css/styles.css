@@ -883,3 +883,14 @@ body { background: var(--nm-base); color: var(--nm-text); }
   background: var(--nm-base); background-image: var(--nm-grad);
   border-radius: 10px; padding: 0 14px; box-shadow: var(--motion-lift-shadow);
 }
+
+/* ---- Project name as a solid colour chip ---------------------------------- */
+.board.names-chip .cell__name,
+.board.names-chip .cell__name:hover {
+  background: var(--pjc);
+  color: #fff;
+  border-radius: 8px;
+  padding: 9px 12px;
+  box-shadow: var(--nm-raised-sm);
+  font-weight: 600;
+}
