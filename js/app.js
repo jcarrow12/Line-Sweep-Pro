@@ -637,8 +637,11 @@
         order.forEach(function (idx) { nl[idx] = x; x += W[idx]; });
         return nl;
       }
+      // The dragged column rides a few px above the surface while moving, so on
+      // release it can float back down onto the board.
+      var LIFT_Y = 4;
       function moveDragged(dx) {
-        rows.forEach(function (r) { var cc = colCell(r, origIndex); if (cc) cc.style.transform = 'translateX(' + dx + 'px)'; });
+        rows.forEach(function (r) { var cc = colCell(r, origIndex); if (cc) cc.style.transform = 'translate(' + dx + 'px,-' + LIFT_Y + 'px)'; });
       }
       function partOthers() {
         var nl = newLefts(target);
@@ -673,17 +676,21 @@
         var to = newLefts(target)[origIndex] - L0[origIndex];
         var dx = ev.clientX - startX;
 
-        // Settle the dragged column from the pointer to its final slot, then
-        // commit. The parted columns are already at their final spots, so once
-        // the store re-renders in the new order nothing visibly moves.
+        // Settle the dragged column from the pointer down into its final slot —
+        // a slow, decelerating float: it glides across, lowers the last few px
+        // onto the board, and its lift shadow fades as it lands. The parted
+        // columns are already in place, so the store re-render is invisible.
+        var LIFT_SHADOW = '10px 0 22px -12px rgba(60,72,110,.32), -10px 0 22px -12px rgba(60,72,110,.32)';
+        var FLAT_SHADOW = '0px 0 0px 0px rgba(60,72,110,0), 0px 0 0px 0px rgba(60,72,110,0)';
         var pending = 0, done = false;
         function commit() { if (done) return; done = true; skipRowStagger = true; S.reorderColumns(keys); }
         rows.forEach(function (r) {
           var cc = colCell(r, origIndex); if (!cc) return;
           pending++;
           var a = cc.animate(
-            [{ transform: 'translateX(' + dx + 'px)' }, { transform: 'translateX(' + to + 'px)' }],
-            { duration: 300, easing: SETTLE, fill: 'forwards' });
+            [{ transform: 'translate(' + dx + 'px,-' + LIFT_Y + 'px)', boxShadow: LIFT_SHADOW },
+             { transform: 'translate(' + to + 'px,0px)', boxShadow: FLAT_SHADOW }],
+            { duration: 480, easing: SETTLE, fill: 'forwards' });
           function fin() { if (--pending <= 0) commit(); }
           a.finished.then(fin).catch(fin);
         });
