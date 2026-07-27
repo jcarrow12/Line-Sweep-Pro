@@ -1624,7 +1624,7 @@
     download('report-' + rs.start + '-to-' + rs.end + '.csv', 'text/csv', csv);
     toast('CSV downloaded', 'success');
   }
-  function exportICS(msList, label) {
+  function buildICSText(msList) {
     function dt(iso) { return iso.replace(/-/g, ''); }
     function esc(s) { return String(s || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n'); }
     var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Project Tracker//EN', 'CALSCALE:GREGORIAN'];
@@ -1637,8 +1637,27 @@
       lines.push('END:VEVENT');
     });
     lines.push('END:VCALENDAR');
-    download('milestones-' + (label || 'export') + '.ics', 'text/calendar', lines.join('\r\n'));
+    return lines.join('\r\n');
+  }
+  function exportICS(msList, label) {
+    download('milestones-' + (label || 'export') + '.ics', 'text/calendar', buildICSText(msList));
     toast('Calendar file downloaded', 'success');
+  }
+
+  // A plain-text schedule summary suitable for Slack / email / clipboard.
+  function personSummaryText(person) {
+    var lines = [person.name + ' — project schedule', ''];
+    var ps = S.state.projects.filter(function (p) { return (p.assigneeIds || []).indexOf(person.id) !== -1 && p.status !== 'done'; });
+    if (!ps.length) lines.push('No active projects.');
+    ps.forEach(function (p) {
+      lines.push('• ' + p.name + '  (' + fmtDate(p.startDate) + '–' + fmtDate(p.dueDate) + ' · ' + S.statusMeta(p.status).label + ' · ' + p.progress + '%)');
+    });
+    var ms = personMilestones(person).filter(function (x) { return !x.milestone.done; }).slice(0, 12);
+    if (ms.length) {
+      lines.push(''); lines.push('Upcoming milestones:');
+      ms.forEach(function (x) { lines.push('  – ' + fmtDate(x.milestone.date) + ': ' + x.milestone.name + ' (' + x.project.name + ')'); });
+    }
+    return lines.join('\n');
   }
 
   // All of a person's dated milestones (their own + project-wide) across the
@@ -1655,19 +1674,65 @@
     return out;
   }
 
-  // Per-person share: email them their calendar or open a printable report.
+  // Per-person share: device share sheet (Slack, Mail, …), copy, email, or files.
   function openShareMenu(anchor, person) {
+    var first = person.name.split(' ')[0];
     openPopover(anchor, function (pop) {
       pop.classList.add('popover--menu');
-      pop.appendChild(el('div', 'popover__label', { text: 'Share with ' + person.name.split(' ')[0] }));
-      var ical = el('button', 'menu-opt', { text: '📅  Download their calendar (.ics)' });
+      pop.appendChild(el('div', 'popover__label', { text: 'Share with ' + first }));
+
+      // Native share sheet — on a phone this lists Slack, Mail, Messages, etc.
+      if (navigator.share) {
+        var nat = el('button', 'menu-opt', { text: '↗  Share via Slack, email…' });
+        nat.addEventListener('click', function () {
+          var text = personSummaryText(person);
+          var data = { title: person.name + ' — project schedule', text: text };
+          var ms = personMilestones(person);
+          if (ms.length && navigator.canShare) {
+            try {
+              var file = new File([buildICSText(ms)], first.toLowerCase() + '-schedule.ics', { type: 'text/calendar' });
+              if (navigator.canShare({ files: [file] })) data.files = [file];
+            } catch (e) {}
+          }
+          navigator.share(data).catch(function () {});
+          closePopover();
+        });
+        pop.appendChild(nat);
+      }
+
+      // Copy a summary — paste into a Slack channel / DM on desktop.
+      var copy = el('button', 'menu-opt', { text: '📋  Copy summary (for Slack)' });
+      copy.addEventListener('click', function () {
+        var text = personSummaryText(person);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { toast('Summary copied — paste into Slack', 'success'); }, function () { toast('Could not copy', 'info'); });
+        } else { toast('Copy not supported here', 'info'); }
+        closePopover();
+      });
+      pop.appendChild(copy);
+
+      // Email a summary (opens the mail client with a draft).
+      var email = el('button', 'menu-opt', { text: '✉️  Email a summary' });
+      email.addEventListener('click', function () {
+        var subject = encodeURIComponent(person.name + ' — project schedule');
+        var body = encodeURIComponent(personSummaryText(person));
+        window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+        closePopover();
+      });
+      pop.appendChild(email);
+
+      pop.appendChild(el('div', 'ctx-sep'));
+
+      var ical = el('button', 'menu-opt', { text: '📅  Calendar file (.ics)' });
       ical.addEventListener('click', function () {
         var ms = personMilestones(person);
-        if (!ms.length) { toast('No dated milestones for ' + person.name.split(' ')[0], 'info'); closePopover(); return; }
+        if (!ms.length) { toast('No dated milestones for ' + first, 'info'); closePopover(); return; }
         exportICS(ms, person.name.replace(/\s+/g, '-').toLowerCase());
         closePopover();
       });
-      var rep = el('button', 'menu-opt', { text: '📄  Open printable report' });
+      pop.appendChild(ical);
+
+      var rep = el('button', 'menu-opt', { text: '📄  Printable report (PDF)' });
       rep.addEventListener('click', function () {
         var ps = S.state.projects.filter(function (p) { return (p.assigneeIds || []).indexOf(person.id) !== -1; });
         var start = null, end = null;
@@ -1676,9 +1741,9 @@
         reportState = { preset: 'custom', start: start || (y + '-01-01'), end: end || (y + '-12-31'), person: person.id };
         closePopover();
         navTo('reports');
-        toast('Report scoped to ' + person.name.split(' ')[0] + ' — use Print to save a PDF', 'info');
+        toast('Report scoped to ' + first + ' — use Print to save a PDF', 'info');
       });
-      pop.appendChild(ical); pop.appendChild(rep);
+      pop.appendChild(rep);
     });
   }
 
