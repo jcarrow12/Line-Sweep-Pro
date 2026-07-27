@@ -46,7 +46,7 @@
     var a = el('span', 'avatar', { title: person ? person.name + ' · ' + person.role : 'Unassigned' });
     if (size) a.style.setProperty('--sz', size + 'px');
     if (person) {
-      a.style.background = person.color;
+      a.style.background = '#868da0';   // neutral — avatars identify by initials, not colour
       a.textContent = person.initials;
     } else {
       a.classList.add('avatar--empty');
@@ -219,8 +219,7 @@
     var wrap = el('button', 'progress', { 'data-project': p.id, 'data-field': 'progress', title: p.progress + '% complete' });
     var track = el('span', 'progress__track');
     var fill = el('span', 'progress__fill');
-    var color = p.status === 'done' ? '#4e8d6e' : (S.projectHealth(p).level === 'overdue' ? '#b04e5b' : '#4f77ae');
-    fill.style.background = color;
+    fill.style.background = '#868da0';   // single neutral tone — length + % carry the meaning
     fill.dataset.pct = '0';
     track.appendChild(fill);
     wrap.appendChild(track);
@@ -312,7 +311,6 @@
 
     // name
     var nameCell = el('div', 'cell cell--name');
-    nameCell.appendChild(healthDot(p));
     var nameBtn = el('button', 'cell__name', { text: p.name });
     nameBtn.addEventListener('click', function () { openEditor(p.id); });
     nameCell.appendChild(nameBtn);
@@ -474,7 +472,6 @@
         var who = m.assigneeId ? S.personById(m.assigneeId) : null;
         var tip = m.name + ' · ' + fmtDateFull(m.date) + (who ? ' · ' + who.name : '');
         var dia = el('span', 'gdia' + (m.done ? ' is-done' : ''), { title: tip });
-        if (who && !m.done) { dia.style.background = who.color; dia.style.borderColor = who.color; }
         dia.style.left = (mx - 6) + 'px';
         track.appendChild(dia);
       });
@@ -563,7 +560,6 @@
 
     var top = el('div', 'kcard__top');
     top.appendChild(priorityTag(p));
-    top.appendChild(healthDot(p));
     card.appendChild(top);
 
     var title = el('button', 'kcard__title', { text: p.name, onclick: function () { openEditor(p.id); } });
@@ -579,7 +575,7 @@
 
     var pg = el('div', 'kcard__progress');
     var fill = el('span', 'kcard__progress-fill');
-    fill.style.background = p.status === 'done' ? '#4e8d6e' : '#4f77ae';
+    fill.style.background = '#868da0';
     pg.appendChild(fill);
     card.appendChild(pg);
     requestAnimationFrame(function () { M.fill(fill, p.progress); });
@@ -1075,11 +1071,11 @@
             var dy = firstTop[i] - r.getBoundingClientRect().top;
             if (r !== el2 && Math.abs(dy) < 0.5) return;
             r.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }],
-              { duration: 190, easing: SETTLE });
+              { duration: 340, easing: SETTLE });
           });
         }
         var bd = backdrop;
-        setTimeout(function () { msList.classList.remove('is-sorting'); if (bd) bd.classList.remove('is-static'); }, 240);
+        setTimeout(function () { msList.classList.remove('is-sorting'); if (bd) bd.classList.remove('is-static'); }, 380);
         dragEl = null; rows = []; capHandle = null; backdrop = null;
       }
     })();

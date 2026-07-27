@@ -686,3 +686,11 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .ms-editor__proxy-chk svg { width: 14px; height: 14px; }
 .ms-editor__proxy-name { font-size: 13px; color: var(--nm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-editor__proxy-date, .ms-editor__proxy-who { font-size: 12px; color: var(--nm-text-soft); white-space: nowrap; }
+
+/* ---- Colour simplification: status is the only coded colour on a row --------
+   Priority reads as neutral text (Critical a touch stronger); the health dot is
+   gone (the date badge already flags "late"); avatars + progress are neutral.
+   Status pills keep their colour, and red stays reserved for genuinely late. */
+.pill--priority { color: var(--nm-text-soft); background: var(--nm-base); background-image: var(--nm-grad); }
+.pill--priority:hover { color: var(--nm-text); background: var(--nm-base); background-image: var(--nm-grad); }
+.ptag { color: var(--nm-text-soft) !important; background: var(--nm-base) !important; }
