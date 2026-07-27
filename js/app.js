@@ -1283,18 +1283,37 @@
       card.appendChild(cap);
       requestAnimationFrame(function () { M.fill(fill, (w.active / maxActive) * 100); });
 
-      // project list
-      var list = el('div', 'pcard__projects');
-      w.projects.slice().sort(function (a, b) { return (a.status === 'done') - (b.status === 'done'); }).forEach(function (p) {
-        var item = el('button', 'pcard__proj', { onclick: function () { openEditor(p.id); } });
+      // project list — active projects only (matches the Active count); any
+      // completed ones tuck behind a toggle so they don't muddy the count.
+      var activeProjects = w.projects.filter(function (p) { return p.status !== 'done'; });
+      var doneProjects = w.projects.filter(function (p) { return p.status === 'done'; });
+      function projItem(p, muted) {
+        var item = el('button', 'pcard__proj' + (muted ? ' pcard__proj--done' : ''), { onclick: function () { openEditor(p.id); } });
         var dot = el('span', 'pcard__proj-dot'); dot.style.background = S.statusMeta(p.status).color;
         item.appendChild(dot);
         item.appendChild(el('span', 'pcard__proj-name', { text: p.name }));
         item.appendChild(el('span', 'pcard__proj-due', { text: fmtDate(p.dueDate) }));
-        list.appendChild(item);
-      });
-      if (!w.projects.length) list.appendChild(el('div', 'pcard__empty', { text: 'No projects assigned' }));
+        return item;
+      }
+      var list = el('div', 'pcard__projects');
+      activeProjects.slice().sort(function (a, b) { return a.dueDate < b.dueDate ? -1 : 1; }).forEach(function (p) { list.appendChild(projItem(p, false)); });
+      if (!activeProjects.length) list.appendChild(el('div', 'pcard__empty', { text: doneProjects.length ? 'No active projects' : 'No projects assigned' }));
       card.appendChild(list);
+
+      if (doneProjects.length) {
+        var doneWrap = el('div', 'pcard__done');
+        doneWrap.style.display = 'none';
+        doneProjects.forEach(function (p) { doneWrap.appendChild(projItem(p, true)); });
+        var toggle = el('button', 'pcard__done-toggle', { text: 'Show ' + doneProjects.length + ' completed' });
+        var open = false;
+        toggle.addEventListener('click', function () {
+          open = !open;
+          doneWrap.style.display = open ? '' : 'none';
+          toggle.textContent = (open ? 'Hide' : 'Show') + ' ' + doneProjects.length + ' completed';
+        });
+        card.appendChild(toggle);
+        card.appendChild(doneWrap);
+      }
 
       var viewBtn = el('button', 'pcard__viewas', { text: 'View ' + person.name.split(' ')[0] + '’s board →' });
       viewBtn.addEventListener('click', function () { setViewAs(person.id); navTo('board'); });

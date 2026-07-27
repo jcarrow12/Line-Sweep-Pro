@@ -773,7 +773,9 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .kcard--stroke::before { opacity: .85; width: 3px; }
 
 /* Timeline bar: red ring when the project is overdue. */
-.gbar.is-late { box-shadow: 0 0 0 2px #b04e5b, var(--nm-raised-sm); }
+/* Overdue projects are flagged on the board and Insights; the timeline bar keeps
+   its plain look (no red ring). */
+.gbar.is-late { box-shadow: 0 2px 6px rgba(0,0,0,.14); }
 
 /* Whole-row tint: every neutral text element in a row takes the project's
    color (--pjc), so a row reads as one color end to end. The late / due-soon
@@ -1053,3 +1055,19 @@ body { background: var(--nm-base); color: var(--nm-text); }
   .view-root { overflow: visible; padding: 0; }
   .report__section, .report__stat { box-shadow: none; border: 1px solid #ddd; }
 }
+
+/* ---- House rule: no left-edge highlight bars on cards ----------------------
+   The colored accent stripe on the left of Kanban cards is removed. Don't
+   reintroduce this pattern (a coloured bar hugging a card/row's left edge). */
+.kcard { padding-left: 12px; }
+.kcard::before { display: none; }
+.kcard--fill { box-shadow: var(--nm-raised-sm); }
+.kcard--fill::before, .kcard--stroke::before { display: none; }
+
+/* Team card: completed-projects toggle */
+.pcard__done-toggle {
+  margin-top: 8px; border: 0; background: transparent; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--nm-text-soft); padding: 4px 2px;
+}
+.pcard__done-toggle:hover { color: var(--nm-accent); }
+.pcard__proj--done .pcard__proj-name { text-decoration: line-through; color: var(--nm-text-soft); }
