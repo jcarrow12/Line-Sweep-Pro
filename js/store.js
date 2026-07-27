@@ -193,10 +193,15 @@
       people: people,
       groups: groups,
       projects: projects,
-      settings: { atRiskDays: 3 },
+      settings: { atRiskDays: 3, defaults: defaultProjectDefaults() },
       columns: defaultColumns(),
       milestonePresets: defaultPresets()
     };
+  }
+
+  // Defaults applied to a brand-new project. null group/owner = "the first one".
+  function defaultProjectDefaults() {
+    return { lengthDays: 14, groupId: null, ownerId: null, priority: 'medium', autoPresetIds: [] };
   }
 
   // Manager-defined milestone templates. `offset` = days from the project start.
@@ -254,6 +259,8 @@
         if (saved.settings && saved.settings.nameStyle === 'colour') saved.settings.nameStyle = 'color';
         // Milestone presets are a later addition.
         if (!saved.milestonePresets) saved.milestonePresets = defaultPresets();
+        // New-project defaults are a later addition.
+        if (saved.settings && !saved.settings.defaults) saved.settings.defaults = defaultProjectDefaults();
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -634,6 +641,12 @@
       n = parseInt(n, 10);
       if (isNaN(n) || n < 0) return;
       state.settings.atRiskDays = n;
+      emit({ type: 'settings' });
+    },
+
+    setDefaults: function (patch) {
+      if (!state.settings.defaults) state.settings.defaults = defaultProjectDefaults();
+      Object.keys(patch).forEach(function (k) { state.settings.defaults[k] = patch[k]; });
       emit({ type: 'settings' });
     },
 

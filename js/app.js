@@ -1823,6 +1823,62 @@
     presetSec.appendChild(addP);
     wrap.appendChild(presetSec);
 
+    // ---- New-project defaults -----------------------------------------------
+    var d0 = (S.state.settings && S.state.settings.defaults) || {};
+    var defSec = section('New-project defaults', 'Pre-fill these when you create a project, so you start faster.');
+    function selRow(label, sel) {
+      var r = el('div', 'settings__row');
+      r.appendChild(el('label', 'settings__row-label', { text: label }));
+      r.appendChild(sel);
+      return r;
+    }
+    function mkSelect(opts, selected, onChange) {
+      var s = el('select', 'input input--sm input--select');
+      opts.forEach(function (o) { var op = el('option', null, { value: o.value, text: o.label }); if (o.value === selected) op.selected = true; s.appendChild(op); });
+      s.addEventListener('change', function () { onChange(s.value); });
+      return s;
+    }
+    // length
+    var lenIn = el('input', 'input input--sm', { type: 'number', min: '1', max: '365', value: d0.lengthDays != null ? d0.lengthDays : 14 });
+    lenIn.style.width = '80px';
+    lenIn.addEventListener('change', function () { var v = parseInt(lenIn.value, 10); if (!isNaN(v) && v > 0) S.setDefaults({ lengthDays: v }); });
+    var lenRow = el('div', 'settings__row'); lenRow.appendChild(el('label', 'settings__row-label', { text: 'Length' }));
+    var lenWrap = el('div', 'settings__inline'); lenWrap.appendChild(lenIn); lenWrap.appendChild(el('span', 'settings__unit', { text: 'days' })); lenRow.appendChild(lenWrap);
+    defSec.appendChild(lenRow);
+    // category
+    defSec.appendChild(selRow('Category', mkSelect(
+      [{ value: '', label: 'First category' }].concat(S.state.groups.map(function (g) { return { value: g.id, label: g.name }; })),
+      d0.groupId || '', function (v) { S.setDefaults({ groupId: v || null }); })));
+    // owner
+    defSec.appendChild(selRow('Owner', mkSelect(
+      [{ value: '', label: 'First team member' }].concat(S.state.people.map(function (pe) { return { value: pe.id, label: pe.name }; })),
+      d0.ownerId || '', function (v) { S.setDefaults({ ownerId: v || null }); })));
+    // priority
+    defSec.appendChild(selRow('Priority', mkSelect(
+      S.PRIORITIES.map(function (pr) { return { value: pr.id, label: pr.label }; }),
+      d0.priority || 'medium', function (v) { S.setDefaults({ priority: v }); })));
+    // auto-add presets
+    if ((S.state.milestonePresets || []).length) {
+      var apLabel = el('div', 'settings__row-label', { text: 'Auto-add milestones' });
+      apLabel.style.marginBottom = '6px';
+      defSec.appendChild(apLabel);
+      var apRow = el('div', 'ms-presets');
+      var autoIds = (d0.autoPresetIds || []).slice();
+      S.state.milestonePresets.forEach(function (pst) {
+        var on = autoIds.indexOf(pst.id) !== -1;
+        var chip = el('button', 'ms-presets__chip' + (on ? ' is-on' : ''), { type: 'button', text: (on ? '✓ ' : '') + pst.name });
+        chip.addEventListener('click', function () {
+          var ids = ((S.state.settings.defaults || {}).autoPresetIds || []).slice();
+          var i = ids.indexOf(pst.id);
+          if (i === -1) ids.push(pst.id); else ids.splice(i, 1);
+          S.setDefaults({ autoPresetIds: ids });
+        });
+        apRow.appendChild(chip);
+      });
+      defSec.appendChild(apRow);
+    }
+    wrap.appendChild(defSec);
+
     // ---- Categories (groups) ------------------------------------------------
     var catSec = section('Categories', 'The phase buckets on the board. Rename, recolor, add, or remove them. Removing one moves its projects into another category.');
     var catList = el('div', 'cat-list');
@@ -2087,11 +2143,27 @@
 
   function openEditor(projectId, defaultGroupId) {
     var isNew = !projectId;
-    var p = isNew ? {
-      name: '', groupId: defaultGroupId || S.state.groups[0].id,
-      ownerId: S.state.people[0] && S.state.people[0].id, status: 'not_started', priority: 'medium',
-      startDate: S.todayISO(), dueDate: S.addDays(S.todayISO(), 14), progress: 0, notes: '', milestones: []
-    } : Object.assign({}, S.projectById(projectId));
+    var p;
+    if (isNew) {
+      var d = (S.state.settings && S.state.settings.defaults) || {};
+      var today = S.todayISO();
+      var owner = (d.ownerId && S.personById(d.ownerId)) ? d.ownerId : (S.state.people[0] && S.state.people[0].id);
+      var grp = defaultGroupId || (d.groupId && S.groupById(d.groupId) ? d.groupId : S.state.groups[0].id);
+      var len = d.lengthDays != null ? d.lengthDays : 14;
+      // Auto-add any presets chosen as defaults, dated from the start.
+      var autoMs = (d.autoPresetIds || []).map(function (pid) {
+        var pst = (S.state.milestonePresets || []).filter(function (x) { return x.id === pid; })[0];
+        if (!pst) return null;
+        return { id: 'ms_' + Math.random().toString(36).slice(2, 8), name: pst.name, date: S.addDays(today, pst.offset || 0), done: false, assigneeId: null };
+      }).filter(Boolean);
+      p = {
+        name: '', groupId: grp, ownerId: owner, assigneeIds: owner ? [owner] : [],
+        status: 'not_started', priority: d.priority || 'medium',
+        startDate: today, dueDate: S.addDays(today, len), progress: 0, notes: '', milestones: autoMs
+      };
+    } else {
+      p = Object.assign({}, S.projectById(projectId));
+    }
     // work on a deep-ish copy of milestones
     p.milestones = (p.milestones || []).map(function (m) { return Object.assign({}, m); });
 

@@ -1127,3 +1127,9 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .cat-row__dot { width: 22px; height: 22px; border: 0; border-radius: 50%; cursor: pointer; box-shadow: var(--nm-raised-sm); padding: 0; }
 .cat-row__dot:hover { transform: scale(1.1); }
 .cat-row__count { font-size: 12px; color: var(--nm-text-soft); white-space: nowrap; }
+
+/* Settings: labeled rows for defaults */
+.settings__row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.settings__row-label { font-size: 13px; color: var(--nm-text-soft); font-weight: 600; min-width: 90px; }
+.settings__row .input--select, .settings__row .settings__inline { flex: 1; max-width: 280px; }
+.ms-presets__chip.is-on { color: #fff; background: var(--nm-accent); background-image: none; }
