@@ -1705,9 +1705,25 @@
   navTo('board');
 
   // Register service worker (only over http/https; ignored on file://).
+  // Also auto-update: check for a new build periodically and on focus, and when
+  // a new service worker takes over, reload once so the latest version shows
+  // without any manual cache-clearing.
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    var hadController = !!navigator.serviceWorker.controller;
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController) { hadController = true; return; } // first install on a fresh load — don't reload
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('service-worker.js').catch(function () {});
+      navigator.serviceWorker.register('service-worker.js').then(function (reg) {
+        reg.update();
+        setInterval(function () { reg.update(); }, 60000);
+        window.addEventListener('focus', function () { reg.update(); });
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) reg.update(); });
+      }).catch(function () {});
     });
   }
 })();
