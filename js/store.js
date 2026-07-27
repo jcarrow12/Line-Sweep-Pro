@@ -27,8 +27,11 @@
   // Each project carries its own colour. Fill vs. outline (in app.js) encodes
   // priority; the hue simply identifies the project. Deep + distinct so the
   // rows never read as washed out.
-  var PROJECT_COLORS = ['#3f6fb0', '#2f8f6b', '#8a5cc0', '#c0504e', '#c07a2e',
-    '#2f8f86', '#b0563f', '#5a63ad', '#3f8fb0', '#a84e78', '#6f8f3f', '#7a6f52'];
+  var PROJECT_COLORS = [
+    '#3f6fb0', '#4759b0', '#5b8ccc', '#3f8fb0', '#2f8f86',
+    '#2f8f6b', '#4e8d6e', '#6f8f3f', '#8a8f2e', '#c07a2e',
+    '#c0504e', '#b0563f', '#a03f5f', '#a84e78', '#c94f8a',
+    '#8a5cc0', '#7660a6', '#5a63ad', '#7a6f52', '#6b8f8f'];
 
   // Board columns beyond the fixed Project name. `visible` drives show/hide;
   // `greyscale` desaturates that column's colour. Priority ships hidden — it's

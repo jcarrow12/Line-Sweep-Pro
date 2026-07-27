@@ -269,18 +269,119 @@
     });
   }
 
-  // Row colour swatches — pick the project's identity colour.
+  // ---- Colour maths (HSV <-> RGB <-> hex), ES5 ------------------------------
+  function cpClamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function hsvToRgb(h, s, v) {
+    h = (h % 360 + 360) % 360; s = cpClamp(s, 0, 1); v = cpClamp(v, 0, 1);
+    var c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  function rgbToHex(r, g, b) { function h(n) { var s = n.toString(16); return s.length < 2 ? '0' + s : s; } return '#' + h(r) + h(g) + h(b); }
+  function hexToRgb(hex) {
+    hex = String(hex || '').replace('#', '');
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) hex = '5a63ad';
+    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  }
+  function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+    if (d) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return [h, mx ? d / mx : 0, mx];
+  }
+
+  // Reusable pointer drag for the picker surfaces (mouse + touch identical).
+  function cpDrag(elm, onMove, onEnd) {
+    elm.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      try { elm.setPointerCapture(e.pointerId); } catch (err) {}
+      onMove(e);
+      function mv(ev) { onMove(ev); }
+      function up(ev) {
+        elm.removeEventListener('pointermove', mv);
+        elm.removeEventListener('pointerup', up);
+        elm.removeEventListener('pointercancel', up);
+        onEnd(ev);
+      }
+      elm.addEventListener('pointermove', mv);
+      elm.addEventListener('pointerup', up);
+      elm.addEventListener('pointercancel', up);
+    });
+  }
+
+  // A neumorphic-styled colour picker: saturation/value area + hue bar + hex.
+  // onChange(hex, committed) fires live while dragging (committed=false) and on
+  // release / hex entry (committed=true).
+  function buildColorPicker(container, initialHex, onChange) {
+    var hsv = rgbToHsv.apply(null, hexToRgb(initialHex)), H = hsv[0], Sv = hsv[1], V = hsv[2];
+    var wrap = el('div', 'cp');
+    var area = el('div', 'cp__area'); var athumb = el('div', 'cp__thumb'); area.appendChild(athumb);
+    var hue = el('div', 'cp__hue'); var hthumb = el('div', 'cp__thumb cp__thumb--hue'); hue.appendChild(hthumb);
+    var foot = el('div', 'cp__foot');
+    var preview = el('span', 'cp__preview');
+    var hexIn = el('input', 'input input--sm cp__hex', { type: 'text', value: initialHex, spellcheck: 'false' });
+    foot.appendChild(preview); foot.appendChild(hexIn);
+    wrap.appendChild(area); wrap.appendChild(hue); wrap.appendChild(foot);
+    container.appendChild(wrap);
+
+    function render(commit) {
+      var rgb = hsvToRgb(H, Sv, V), hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+      area.style.background = 'linear-gradient(to top, #000, rgba(0,0,0,0)), ' +
+        'linear-gradient(to right, #fff, rgba(255,255,255,0)), ' + rgbToHex.apply(null, hsvToRgb(H, 1, 1));
+      athumb.style.left = (Sv * 100) + '%'; athumb.style.top = ((1 - V) * 100) + '%'; athumb.style.background = hex;
+      hthumb.style.left = (H / 360 * 100) + '%';
+      preview.style.background = hex;
+      if (document.activeElement !== hexIn) hexIn.value = hex;
+      onChange(hex, commit);
+    }
+    cpDrag(area, function (e) {
+      var r = area.getBoundingClientRect();
+      Sv = cpClamp((e.clientX - r.left) / r.width, 0, 1);
+      V = cpClamp(1 - (e.clientY - r.top) / r.height, 0, 1);
+      render(false);
+    }, function () { render(true); });
+    cpDrag(hue, function (e) {
+      var r = hue.getBoundingClientRect();
+      H = cpClamp((e.clientX - r.left) / r.width, 0, 1) * 360;
+      render(false);
+    }, function () { render(true); });
+    hexIn.addEventListener('change', function () {
+      var v = hexIn.value.trim().replace(/^#/, '');
+      if (/^[0-9a-fA-F]{6}$/.test(v)) { var hv = rgbToHsv.apply(null, hexToRgb(v)); H = hv[0]; Sv = hv[1]; V = hv[2]; render(true); }
+      else render(false);
+    });
+    render(false);
+  }
+
+  // Row colour: preset quick-picks + a full neumorphic colour picker.
   function buildColorSwatches(pop, p) {
     pop.classList.add('popover--colors');
     pop.appendChild(el('div', 'ctx-label', { text: 'Row colour' }));
     var grid = el('div', 'color-grid');
     S.PROJECT_COLORS.forEach(function (c) {
-      var sw = el('button', 'color-sw' + (p.color === c ? ' is-on' : ''), { title: c });
+      var sw = el('button', 'color-sw' + ((p.color || '').toLowerCase() === c.toLowerCase() ? ' is-on' : ''), { title: c });
       sw.style.background = c;
       sw.addEventListener('click', function () { S.setProjectColor(p.id, c); closePopover(); });
       grid.appendChild(sw);
     });
     pop.appendChild(grid);
+    pop.appendChild(el('div', 'ctx-sep'));
+    pop.appendChild(el('div', 'ctx-label', { text: 'Custom' }));
+
+    // Live preview updates the row directly (cheap); commit persists via store.
+    function applyLive(hex) {
+      var row = viewRoot.querySelector('[data-project="' + p.id + '"]');
+      if (!row) return;
+      row.style.setProperty('--pjc', hex);
+      var pill = row.querySelector('.pill--status'); if (pill) pill.style.setProperty('--pjc', hex);
+      var pf = row.querySelector('.progress__fill'); if (pf) pf.style.background = hex;
+    }
+    buildColorPicker(pop, p.color || '#5a63ad', function (hex, commit) {
+      applyLive(hex);
+      if (commit) S.setProjectColor(p.id, hex);
+    });
   }
   function openRowColorMenu(anchor, p) {
     openPopover(anchor, function (pop) { buildColorSwatches(pop, p); });

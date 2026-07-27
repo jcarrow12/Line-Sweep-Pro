@@ -849,3 +849,25 @@ body { background: var(--nm-base); color: var(--nm-text); }
 /* ---- Project-name appearance: greyscale / dark greyscale -------------------- */
 .board.names-grey .row .cell__name { color: var(--nm-text-soft); }
 .board.names-dark .row .cell__name { color: var(--nm-text); }
+
+/* ---- Custom colour picker (neumorphic) ------------------------------------ */
+.popover--colors { min-width: 216px; }
+.cp { display: flex; flex-direction: column; gap: 11px; padding: 8px 6px 4px; }
+.cp__area {
+  position: relative; width: 100%; height: 124px; border-radius: 12px;
+  box-shadow: var(--nm-inset-sm), inset 0 0 0 1px rgba(156,165,178,.25);
+  cursor: crosshair; touch-action: none;
+}
+.cp__hue {
+  position: relative; width: 100%; height: 14px; border-radius: 999px; cursor: pointer; touch-action: none;
+  background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+  box-shadow: var(--nm-inset-sm);
+}
+.cp__thumb {
+  position: absolute; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px #fff, var(--nm-raised-sm); pointer-events: none;
+}
+.cp__thumb--hue { top: 50%; width: 16px; height: 16px; background: #fff; }
+.cp__foot { display: flex; align-items: center; gap: 9px; }
+.cp__preview { width: 28px; height: 28px; border-radius: 9px; box-shadow: var(--nm-raised-sm); flex: none; }
+.cp__hex { flex: 1; text-transform: uppercase; letter-spacing: .04em; }
