@@ -455,18 +455,20 @@
       if (group.collapsed) body.style.display = 'none';
 
       // Column header — Project is fixed; the rest come from the column config.
-      // Right-click any header for greyscale + show/hide columns.
+      // Right-click any header for greyscale + show/hide columns; drag a header
+      // (grab it) to reorder the columns.
       var header = el('div', 'row row--header');
       var projHead = el('div', 'cell cell--head', { text: 'Project' });
       projHead.addEventListener('contextmenu', function (e) { e.preventDefault(); openColumnMenuAt(e.clientX, e.clientY, null); });
       header.appendChild(projHead);
       cols.forEach(function (col) {
-        var hc = el('div', 'cell cell--head', { text: col.label });
+        var hc = el('div', 'cell cell--head is-draggable', { text: col.label, 'data-colkey': col.key });
         if (col.greyscale) hc.classList.add('is-greyscale-head');
         hc.addEventListener('contextmenu', function (e) { e.preventDefault(); openColumnMenuAt(e.clientX, e.clientY, col.key); });
         header.appendChild(hc);
       });
       body.appendChild(header);
+      initColumnSort(header);
 
       projects.forEach(function (p) {
         var row = buildRow(p, group);
@@ -579,6 +581,83 @@
       else { var d = root.querySelector('.group.is-dragging-group'); if (d) d.classList.remove('is-dragging-group'); }
       proxy = null; indicator = null; dragId = null;
     }
+  }
+
+  // Grab a column header and drag to reorder the columns — same feel as the
+  // milestone reorder: a lightweight proxy follows the pointer, the other head
+  // cells part to open a gap, and the dragged column settles into its slot.
+  function initColumnSort(header) {
+    var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    header.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      var cell = e.target && e.target.closest ? e.target.closest('.cell--head.is-draggable') : null;
+      if (!cell) return;
+      var cells = Array.prototype.slice.call(header.querySelectorAll('.cell--head.is-draggable'));
+      var origIndex = cells.indexOf(cell);
+      if (origIndex === -1 || cells.length < 2) return;
+
+      var startX = e.clientX, activated = false, proxy = null, capId = e.pointerId;
+      var W = [], L0 = [], baseLeft = 0, target = origIndex;
+      try { cell.setPointerCapture(capId); } catch (err) {}
+
+      function activate() {
+        activated = true;
+        W = cells.map(function (c) { return c.getBoundingClientRect().width; });
+        L0 = cells.map(function (c) { return c.getBoundingClientRect().left; });
+        baseLeft = L0[0];
+        var r = cell.getBoundingClientRect();
+        proxy = cell.cloneNode(true);
+        proxy.classList.add('cell--head--proxy', 'm-lift');
+        proxy.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' +
+          r.width + 'px;height:' + r.height + 'px;margin:0;z-index:600;pointer-events:none;';
+        document.body.appendChild(proxy);
+        cell.style.visibility = 'hidden';
+        cells.forEach(function (c, i) { if (i !== origIndex) c.style.transition = 'transform var(--motion) ' + SETTLE; });
+      }
+      function newLefts(t) {
+        var order = [];
+        for (var i = 0; i < cells.length; i++) if (i !== origIndex) order.push(i);
+        order.splice(t, 0, origIndex);
+        var x = baseLeft, nl = new Array(cells.length);
+        order.forEach(function (idx) { nl[idx] = x; x += W[idx]; });
+        return nl;
+      }
+      function layout() {
+        var nl = newLefts(target);
+        for (var i = 0; i < cells.length; i++) { if (i === origIndex) continue; cells[i].style.transform = 'translateX(' + (nl[i] - L0[i]) + 'px)'; }
+      }
+      function computeTarget(dx) {
+        var proxyCenter = L0[origIndex] + W[origIndex] / 2 + dx, insertAt = 0;
+        for (var i = 0; i < cells.length; i++) { if (i === origIndex) continue; if (L0[i] + W[i] / 2 < proxyCenter) insertAt++; }
+        return insertAt;
+      }
+      function onMove(ev) {
+        var dx = ev.clientX - startX;
+        if (!activated) { if (Math.abs(dx) < 4) return; activate(); }
+        proxy.style.transform = 'translateX(' + dx + 'px)';
+        var t = computeTarget(dx);
+        if (t !== target) { target = t; layout(); }
+      }
+      function onUp(ev) {
+        document.removeEventListener('pointermove', onMove, true);
+        document.removeEventListener('pointerup', onUp, true);
+        try { cell.releasePointerCapture(capId); } catch (err) {}
+        if (!activated) return;
+        var nl = newLefts(target);
+        var order = [];
+        for (var i = 0; i < cells.length; i++) if (i !== origIndex) order.push(i);
+        order.splice(target, 0, origIndex);
+        var keys = order.map(function (idx) { return cells[idx].getAttribute('data-colkey'); });
+        var from = ev.clientX - startX, to = nl[origIndex] - L0[origIndex];
+        var anim = proxy.animate(
+          [{ transform: 'translateX(' + from + 'px)' }, { transform: 'translateX(' + to + 'px)' }],
+          { duration: 300, easing: SETTLE, fill: 'forwards' });
+        function commit() { if (proxy) proxy.remove(); S.reorderColumns(keys); }
+        anim.finished.then(commit).catch(commit);
+      }
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onUp, true);
+    });
   }
 
   // Per-column cell builders, keyed by column id. renderBoard walks the

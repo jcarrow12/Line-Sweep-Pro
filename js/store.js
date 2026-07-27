@@ -492,6 +492,23 @@
       return (state.columns || []).filter(function (c) { return c.visible; });
     },
 
+    // Reorder the visible columns. `orderedVisibleKeys` is the new order of the
+    // currently-visible columns; hidden columns keep their existing slots.
+    reorderColumns: function (orderedVisibleKeys) {
+      var byKey = {};
+      state.columns.forEach(function (c) { byKey[c.key] = c; });
+      var queue = orderedVisibleKeys.slice(), qi = 0;
+      var next = state.columns.map(function (c) { return c.visible ? null : c; });
+      for (var i = 0; i < next.length; i++) {
+        if (next[i] === null) { var k = queue[qi++]; next[i] = byKey[k] || null; }
+      }
+      // Safety: drop any nulls (shouldn't happen) and append any missing columns.
+      next = next.filter(Boolean);
+      state.columns.forEach(function (c) { if (next.indexOf(c) === -1) next.push(c); });
+      state.columns = next;
+      emit({ type: 'columns' });
+    },
+
     columnByKey: function (key) {
       return (state.columns || []).filter(function (c) { return c.key === key; })[0];
     },

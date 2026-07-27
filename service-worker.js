@@ -2,7 +2,7 @@
    Network-first for the app shell so new deploys show up immediately when
    online; falls back to the cache when offline. Cross-origin assets (e.g.
    Google Fonts) are cache-first. */
-const CACHE = 'line-sweep-pro-v27';
+const CACHE = 'line-sweep-pro-v28';
 const ASSETS = [
   './',
   './index.html',
