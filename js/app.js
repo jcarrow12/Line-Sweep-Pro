@@ -236,6 +236,8 @@
   }
 
   // Column header menu: greyscale toggle + show/hide columns.
+  // colKey === null is the fixed Project (name) column, which gets name-colour
+  // options instead of a plain greyscale toggle.
   function openColumnMenuAt(x, y, colKey) {
     openContextMenuAt(x, y, function (pop) {
       if (colKey) {
@@ -243,6 +245,17 @@
         var g = el('button', 'ctx-item', { text: col.greyscale ? 'Restore colour' : 'Make greyscale' });
         g.addEventListener('click', function () { S.toggleColumnGreyscale(colKey); closePopover(); });
         pop.appendChild(g);
+        pop.appendChild(el('div', 'ctx-sep'));
+      } else {
+        pop.appendChild(el('div', 'ctx-label', { text: 'Project names' }));
+        var cur = (S.state.settings && S.state.settings.nameStyle) || 'colour';
+        [['colour', 'Project colour'], ['grey', 'Greyscale'], ['dark', 'Dark greyscale']].forEach(function (o) {
+          var item = el('button', 'ctx-item ctx-item--check' + (cur === o[0] ? ' is-on' : ''));
+          item.appendChild(el('span', 'ctx-check', { html: cur === o[0] ? checkSVG() : '' }));
+          item.appendChild(el('span', 'ctx-item__label', { text: o[1] }));
+          item.addEventListener('click', function () { S.setNameStyle(o[0]); closePopover(); });
+          pop.appendChild(item);
+        });
         pop.appendChild(el('div', 'ctx-sep'));
       }
       pop.appendChild(el('div', 'ctx-label', { text: 'Show columns' }));
@@ -309,6 +322,10 @@
       st.overdue + ' overdue · ' + st.avgProgress + '% avg progress';
 
     var root = el('div', 'board');
+    // Project-name appearance (colour / grey / dark greyscale).
+    var nameStyle = (S.state.settings && S.state.settings.nameStyle) || 'colour';
+    if (nameStyle === 'grey') root.classList.add('names-grey');
+    else if (nameStyle === 'dark') root.classList.add('names-dark');
     // Build the grid track list from the visible columns (name column fixed).
     var cols = S.visibleColumns();
     root.style.setProperty('--cols', 'minmax(200px,2.2fr) ' + cols.map(function (c) { return c.width; }).join(' '));
@@ -318,14 +335,16 @@
       var projects = S.projectsInGroup(group.id).filter(matchesQuery);
       if (query && !projects.length) return;
 
-      var section = el('section', 'group');
+      var section = el('section', 'group', { 'data-group': group.id });
       section.style.setProperty('--group', group.color);
 
       var head = el('div', 'group__head');
+      var grip = el('button', 'group__grip', { html: gripSVG(), title: 'Drag to reorder category' });
       var caret = el('button', 'group__caret' + (group.collapsed ? ' is-collapsed' : ''), { html: caretSVG() });
       var title = el('button', 'group__title', { text: group.name });
       title.style.color = group.color;
       var count = el('span', 'group__count', { text: projects.length + '' });
+      head.appendChild(grip);
       head.appendChild(caret);
       head.appendChild(title);
       head.appendChild(count);
@@ -375,6 +394,90 @@
     clear(viewRoot);
     viewRoot.appendChild(root);
     M.stagger(rowEls, { step: 26, y: 10 });
+    initGroupSort(root);
+  }
+
+  // Grab a category's header grip to reorder the phase categories. The dragged
+  // section dims in place while a lightweight header proxy follows the pointer;
+  // a drop line shows where it will land. On release the board re-renders in the
+  // new order with a settle stagger.
+  function initGroupSort(root) {
+    var proxy = null, dragId = null, indicator = null, grabDy = 0, capEl = null, capId = null, lastY = 0;
+
+    function otherSections() {
+      return Array.prototype.slice.call(root.querySelectorAll('.group')).filter(function (s) {
+        return s.getAttribute('data-group') !== dragId;
+      });
+    }
+    function dropIndex(y) {
+      var o = otherSections();
+      for (var i = 0; i < o.length; i++) {
+        var r = o[i].getBoundingClientRect();
+        if (y < r.top + r.height / 2) return i;
+      }
+      return o.length;
+    }
+    function positionIndicator(y) {
+      var o = otherSections();
+      if (!o.length) return;
+      var i = dropIndex(y), top;
+      if (i >= o.length) top = o[o.length - 1].getBoundingClientRect().bottom + 5;
+      else top = o[i].getBoundingClientRect().top - 5;
+      indicator.style.top = (top - root.getBoundingClientRect().top) + 'px';
+    }
+
+    root.addEventListener('pointerdown', function (e) {
+      var grip = e.target && e.target.closest ? e.target.closest('.group__grip') : null;
+      if (!grip) return;
+      var section = grip.closest('.group');
+      if (!section) return;
+      e.preventDefault();
+      dragId = section.getAttribute('data-group');
+      var head = section.querySelector('.group__head');
+      var r = head.getBoundingClientRect();
+      grabDy = e.clientY - r.top;
+
+      proxy = head.cloneNode(true);
+      proxy.classList.add('group__head--proxy', 'm-lift');
+      proxy.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' +
+        r.width + 'px;margin:0;z-index:600;pointer-events:none;';
+      document.body.appendChild(proxy);
+      section.classList.add('is-dragging-group');
+
+      indicator = el('div', 'group__drop-line');
+      root.appendChild(indicator);
+      lastY = e.clientY;
+      positionIndicator(e.clientY);
+
+      capEl = grip; capId = e.pointerId;
+      try { grip.setPointerCapture(capId); } catch (err) {}
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onUp, true);
+    });
+
+    function onMove(e) {
+      lastY = e.clientY;
+      proxy.style.top = (e.clientY - grabDy) + 'px';
+      positionIndicator(e.clientY);
+    }
+    function onUp(e) {
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', onUp, true);
+      try { capEl.releasePointerCapture(capId); } catch (err) {}
+      var o = otherSections();
+      var i = dropIndex(lastY);
+      var ids = o.map(function (s) { return s.getAttribute('data-group'); });
+      ids.splice(i, 0, dragId);
+      if (proxy) proxy.remove();
+      if (indicator) indicator.remove();
+      // Only commit (and re-render) if the order actually changed.
+      var current = Array.prototype.slice.call(root.querySelectorAll('.group'))
+        .map(function (s) { return s.getAttribute('data-group'); });
+      var changed = ids.some(function (id, k) { return id !== current[k]; });
+      if (changed) S.reorderGroups(ids);
+      else { var d = root.querySelector('.group.is-dragging-group'); if (d) d.classList.remove('is-dragging-group'); }
+      proxy = null; indicator = null; dragId = null;
+    }
   }
 
   // Per-column cell builders, keyed by column id. renderBoard walks the
@@ -449,13 +552,10 @@
     row.style.setProperty('--group', group.color);
     row.style.setProperty('--pjc', p.color || '#5a63ad');   // project identity colour
 
-    // name (fixed first column, with a project-colour dot + accent)
+    // name (fixed first column). Right-click the name to recolour the row.
     var nameCell = el('div', 'cell cell--name', { 'data-label': 'Project' });
-    var dot = el('button', 'row-dot', { title: 'Row colour — right-click or click to change' });
-    dot.addEventListener('click', function (e) { e.stopPropagation(); openRowColorMenu(dot, p); });
     var nameBtn = el('button', 'cell__name', { text: p.name });
     nameBtn.addEventListener('click', function () { openEditor(p.id); });
-    nameCell.appendChild(dot);
     nameCell.appendChild(nameBtn);
     nameCell.addEventListener('contextmenu', function (e) {
       e.preventDefault(); openRowColorMenuAt(e.clientX, e.clientY, p);

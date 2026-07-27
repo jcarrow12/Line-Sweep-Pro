@@ -705,7 +705,11 @@ body { background: var(--nm-base); color: var(--nm-text); }
   color: #fff;
   background: var(--pjc);
   background-image: none;
-  border: 2px solid transparent;   /* match stroke geometry so both pills size identically */
+  /* No border here: a transparent border let the fill paint past the neumorphic
+     bevel and buried the raised highlight. Match the outlined pill's height with
+     +2px padding instead, so the bevel sits crisply at the edge and the pill
+     keeps its raised look. */
+  padding: 9px 12px;
   box-shadow: var(--nm-raised-sm);
 }
 .pill--fill:hover { color: #fff; background: var(--pjc); background-image: none; filter: brightness(1.06); transform: translateY(-1px); }
@@ -818,3 +822,30 @@ body { background: var(--nm-base); color: var(--nm-text); }
   .modal--wide .modal__pane--main { padding-right: 0; }
   .modal--wide .modal__pane--side { padding-left: 0; border-left: 0; }
 }
+
+/* ---- Reorder phase categories (drag the header grip) ----------------------- */
+.board { position: relative; }
+.group__grip {
+  border: 0; background: transparent; color: var(--nm-text-soft, var(--ink-soft));
+  padding: 2px; border-radius: 6px; cursor: grab; opacity: .5; flex: none;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.group__head:hover .group__grip { opacity: 1; }
+.group__grip:active { cursor: grabbing; }
+.group__grip svg { width: 16px; height: 16px; }
+.group.is-dragging-group { opacity: .38; transition: opacity var(--motion-fast) var(--ease-standard); }
+.group__head--proxy {
+  background: var(--nm-base); background-image: var(--nm-grad);
+  border-radius: 12px; padding: 8px 12px; box-shadow: var(--motion-lift-shadow);
+  display: flex; align-items: center; gap: 8px;
+}
+.group__drop-line {
+  position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px;
+  background: var(--nm-accent, #4f77ae); box-shadow: 0 0 0 2px rgba(255,255,255,.5);
+  pointer-events: none; z-index: 5;
+  transition: top 120ms var(--ease-standard);
+}
+
+/* ---- Project-name appearance: greyscale / dark greyscale -------------------- */
+.board.names-grey .row .cell__name { color: var(--nm-text-soft); }
+.board.names-dark .row .cell__name { color: var(--nm-text); }

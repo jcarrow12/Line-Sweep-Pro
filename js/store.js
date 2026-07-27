@@ -402,6 +402,18 @@
       emit({ type: 'delete', id: id });
     },
 
+    // Reorder the phase categories on the board. `orderedIds` is the new full
+    // order; any group missing from it is appended (safety).
+    reorderGroups: function (orderedIds) {
+      var map = {};
+      state.groups.forEach(function (g) { map[g.id] = g; });
+      var next = [];
+      orderedIds.forEach(function (id) { if (map[id] && next.indexOf(map[id]) === -1) next.push(map[id]); });
+      state.groups.forEach(function (g) { if (next.indexOf(g) === -1) next.push(g); });
+      state.groups = next;
+      emit({ type: 'groups-reorder' });
+    },
+
     moveProjectToGroup: function (id, groupId) {
       var p = projectById(id);
       if (p) { p.groupId = groupId; emit({ type: 'move', id: id }); }
@@ -486,6 +498,13 @@
     setEditorLayout: function (layout) {
       state.settings.editorLayout = layout;
       persist();
+    },
+
+    // Project-name appearance on the board: 'colour' (project colour) | 'grey' |
+    // 'dark' (dark greyscale).
+    setNameStyle: function (style) {
+      state.settings.nameStyle = style;
+      emit({ type: 'settings' });
     },
 
     renameBoard: function (name) { state.board.name = name; emit({ type: 'board' }); },
