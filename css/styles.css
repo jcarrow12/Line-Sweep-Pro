@@ -963,3 +963,17 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .pcard__add-plus { font-size: 30px; line-height: 1; font-weight: 400; }
 
 .modal--sm { max-width: 420px; }
+
+/* ---- Timeline person filter ----------------------------------------------- */
+.tl-filter { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; -webkit-overflow-scrolling: touch; }
+.tl-filter__chip {
+  display: inline-flex; align-items: center; gap: 7px; flex: none;
+  border: 0; padding: 6px 13px 6px 8px; border-radius: 999px; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--nm-text-soft);
+  background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+  transition: transform var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.tl-filter__chip:not(:has(.avatar)) { padding-left: 13px; }
+.tl-filter__chip:hover { transform: translateY(-1px); color: var(--nm-text); }
+.tl-filter__chip.is-on { color: var(--nm-accent); box-shadow: var(--nm-inset-sm); }
+.tl-empty { padding: 40px 8px; text-align: center; color: var(--nm-text-soft); font-size: 14px; }

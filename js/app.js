@@ -14,6 +14,7 @@
 
   var currentView = 'board';
   var query = '';
+  var timelineFilter = null;   // null = everyone; otherwise a person id
 
   // ---- Tiny DOM helpers -----------------------------------------------------
 
@@ -930,21 +931,33 @@
 
   function renderTimeline() {
     viewTitle.textContent = 'Timeline';
-    var projects = S.state.projects.filter(matchesQuery).slice().sort(function (a, b) {
+    // Validate the remembered filter against the current roster.
+    if (timelineFilter && !S.personById(timelineFilter)) timelineFilter = null;
+    var filterPerson = timelineFilter ? S.personById(timelineFilter) : null;
+
+    var projects = S.state.projects.filter(matchesQuery).filter(function (p) {
+      return !timelineFilter || (p.assigneeIds || []).indexOf(timelineFilter) !== -1;
+    }).slice().sort(function (a, b) {
       return a.startDate < b.startDate ? -1 : 1;
     });
-    viewSubtitle.textContent = projects.length + ' projects on the schedule';
+    viewSubtitle.textContent = (filterPerson ? filterPerson.name + ' · ' : '') +
+      projects.length + ' project' + (projects.length === 1 ? '' : 's') + ' on the schedule';
 
-    // Compute date range
+    // A milestone is shown when unfiltered, or it belongs to the filtered person,
+    // or it's a project-level (everyone) milestone.
+    function msVisible(m) { return !timelineFilter || m.assigneeId === timelineFilter || !m.assigneeId; }
+
+    // Compute date range from what's actually shown.
     var today = S.todayISO();
     var min = today, max = today;
     projects.forEach(function (p) {
       if (p.startDate < min) min = p.startDate;
       if (p.dueDate > max) max = p.dueDate;
-    });
-    (S.allMilestones()).forEach(function (x) {
-      if (x.milestone.date < min) min = x.milestone.date;
-      if (x.milestone.date > max) max = x.milestone.date;
+      (p.milestones || []).forEach(function (m) {
+        if (!msVisible(m)) return;
+        if (m.date < min) min = m.date;
+        if (m.date > max) max = m.date;
+      });
     });
     // pad
     min = S.addDays(min, -3);
@@ -954,6 +967,20 @@
     var totalW = span * DAY_W;
 
     var wrap = el('div', 'timeline');
+
+    // Person filter: Everyone + each team member.
+    var filterBar = el('div', 'tl-filter');
+    function chip(label, id, person) {
+      var c = el('button', 'tl-filter__chip' + (timelineFilter === id ? ' is-on' : ''));
+      if (person) c.appendChild(avatar(person, 20));
+      c.appendChild(el('span', null, { text: label }));
+      c.addEventListener('click', function () { timelineFilter = id; renderTimeline(); });
+      return c;
+    }
+    filterBar.appendChild(chip('Everyone', null, null));
+    S.state.people.forEach(function (pe) { filterBar.appendChild(chip(pe.name.split(' ')[0], pe.id, pe)); });
+    wrap.appendChild(filterBar);
+
     var scroll = el('div', 'timeline__scroll');
     var inner = el('div', 'timeline__inner');
     inner.style.width = (totalW + 240) + 'px';
@@ -1011,6 +1038,7 @@
 
       // milestone diamonds (tinted by the person who owns the milestone)
       (p.milestones || []).forEach(function (m) {
+        if (!msVisible(m)) return;
         var mx = S.daysBetween(min, m.date) * DAY_W;
         var who = m.assigneeId ? S.personById(m.assigneeId) : null;
         var tip = m.name + ' · ' + fmtDateFull(m.date) + (who ? ' · ' + who.name : '');
@@ -1026,6 +1054,11 @@
     inner.appendChild(rows);
     scroll.appendChild(inner);
     wrap.appendChild(scroll);
+
+    if (!projects.length) {
+      var empty = el('div', 'tl-empty', { text: filterPerson ? (filterPerson.name.split(' ')[0] + ' has no projects on the schedule.') : 'No projects on the schedule yet.' });
+      wrap.appendChild(empty);
+    }
 
     clear(viewRoot);
     viewRoot.appendChild(wrap);
