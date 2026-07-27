@@ -982,7 +982,7 @@
     // Nothing is rebuilt mid-drag — pure transforms — so it stays smooth.
     (function initSortable() {
       var SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-      var dragEl = null, rows = [], origIndex = 0, step = 0, startY = 0, target = 0, capHandle = null, capId = null;
+      var dragEl = null, rows = [], origIndex = 0, step = 0, startY = 0, target = 0, capHandle = null, capId = null, backdrop = null;
       function rowEls() { return Array.prototype.slice.call(msList.querySelectorAll('.ms-editor__row')); }
 
       msList.addEventListener('pointerdown', function (e) {
@@ -1000,6 +1000,11 @@
         row.classList.add('m-lift'); row.style.transition = 'none'; row.style.zIndex = '5';
         rows.forEach(function (r) { if (r !== row) r.style.transition = 'transform var(--motion) ' + SETTLE; });
         document.body.style.userSelect = 'none';
+        // Promote rows to their own GPU layers (their native selects/date inputs
+        // repaint every frame otherwise) and drop the costly backdrop blur.
+        msList.classList.add('is-sorting');
+        backdrop = modalHost.querySelector('.modal-backdrop');
+        if (backdrop) backdrop.classList.add('is-static');
         handle.addEventListener('pointermove', onMove);
         handle.addEventListener('pointerup', onUp);
         handle.addEventListener('pointercancel', onUp);
@@ -1052,7 +1057,13 @@
               { duration: 190, easing: SETTLE });
           });
         }
-        dragEl = null; rows = []; capHandle = null;
+        // Restore the blur + drop the GPU layers once the settle has finished.
+        var bd = backdrop;
+        setTimeout(function () {
+          msList.classList.remove('is-sorting');
+          if (bd) bd.classList.remove('is-static');
+        }, 240);
+        dragEl = null; rows = []; capHandle = null; backdrop = null;
       }
     })();
 

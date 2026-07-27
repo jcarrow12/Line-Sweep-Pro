@@ -671,3 +671,10 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .pcard__cap-level--high { background: rgba(176,78,91,.16); color: #b04e5b; }
 .pcard__cap-level--balanced { background: rgba(156,165,178,.16); color: var(--nm-text-soft); }
 .pcard__cap-level--free { background: rgba(156,165,178,.12); color: var(--nm-text-soft); }
+
+/* ---- Smooth milestone reorder --------------------------------------------
+   During a drag: promote each row to its own GPU layer (so native selects/date
+   inputs rasterize once instead of repainting per frame), and drop the modal's
+   backdrop blur (re-blurring the viewport every frame is the main jank source). */
+.ms-editor.is-sorting .ms-editor__row { will-change: transform; }
+.modal-backdrop.is-static { -webkit-backdrop-filter: none; backdrop-filter: none; }
