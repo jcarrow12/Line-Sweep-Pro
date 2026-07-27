@@ -1146,9 +1146,51 @@
   //  PEOPLE / workload view
   // ==========================================================================
 
+  // Add / edit / remove a team member.
+  function openPersonEditor(person) {
+    var isNew = !person;
+    var backdrop = el('div', 'modal-backdrop');
+    var panel = el('div', 'modal modal--sm');
+    var head = el('div', 'modal__head');
+    head.appendChild(el('div', 'modal__eyebrow', { text: isNew ? 'Add member' : 'Edit member' }));
+    head.appendChild(el('button', 'modal__close', { html: '&times;', onclick: dismiss }));
+    panel.appendChild(head);
+    var body = el('div', 'modal__body');
+    var nameI = pfield(body, 'Name', el('input', 'input', { type: 'text', value: person ? person.name : '', placeholder: 'e.g. Alex Rivera' }));
+    var roleI = pfield(body, 'Role', el('input', 'input', { type: 'text', value: person ? person.role : '', placeholder: 'e.g. Motion Designer' }));
+    panel.appendChild(body);
+    var foot = el('div', 'modal__foot');
+    if (!isNew) {
+      foot.appendChild(el('button', 'btn btn--ghost-danger', { text: 'Remove', onclick: function () {
+        if (confirm('Remove ' + person.name + '? Their projects will become unassigned.')) { S.removePerson(person.id); toast('Removed ' + person.name, 'info'); dismiss(); }
+      } }));
+    }
+    foot.appendChild(el('div', 'modal__foot-spacer'));
+    foot.appendChild(el('button', 'btn btn--soft', { text: 'Cancel', onclick: dismiss }));
+    foot.appendChild(el('button', 'btn btn--primary', { text: isNew ? 'Add' : 'Save', onclick: save }));
+    panel.appendChild(foot);
+
+    modalHost.hidden = false; clear(modalHost); modalHost.appendChild(backdrop); modalHost.appendChild(panel);
+    M.modalIn(panel, backdrop); backdrop.addEventListener('click', dismiss);
+    setTimeout(function () { nameI.focus(); }, 60);
+    document.addEventListener('keydown', onKey);
+
+    function save() {
+      var nm = nameI.value.trim();
+      if (!nm) { nameI.focus(); return; }
+      var role = roleI.value.trim() || 'Team member';
+      if (isNew) { S.addPerson(nm, role); toast('Added ' + nm, 'success'); }
+      else { S.updatePerson(person.id, { name: nm, role: role }); toast('Saved', 'success'); }
+      dismiss();
+    }
+    function dismiss() { M.modalOut(panel, backdrop).finished.then(function () { modalHost.hidden = true; clear(modalHost); }); document.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') dismiss(); }
+    function pfield(parent, label, input) { var f = el('div', 'field'); f.appendChild(el('label', 'field__label', { text: label })); f.appendChild(input); parent.appendChild(f); return input; }
+  }
+
   function renderPeople() {
     viewTitle.textContent = 'Team';
-    viewSubtitle.textContent = S.state.people.length + ' team members · workload & assignments';
+    viewSubtitle.textContent = S.state.people.length + ' team members · tap a card to edit, or add someone new';
 
     var grid = el('div', 'people-grid');
     var cardEls = [];
@@ -1167,6 +1209,10 @@
       idn.appendChild(el('div', 'pcard__role', { text: person.role }));
       head.appendChild(idn);
       card.appendChild(head);
+
+      var editBtn = el('button', 'pcard__edit', { html: editSVG(), title: 'Edit ' + person.name });
+      editBtn.addEventListener('click', function () { openPersonEditor(person); });
+      card.appendChild(editBtn);
 
       var stats = el('div', 'pcard__stats');
       stats.appendChild(stat(w.active, 'Active'));
@@ -1205,6 +1251,12 @@
       grid.appendChild(card);
       cardEls.push(card);
     });
+
+    // Add-member tile
+    var addTile = el('button', 'pcard pcard--add', { html: '<span class="pcard__add-plus">+</span><span>Add team member</span>' });
+    addTile.addEventListener('click', function () { openPersonEditor(null); });
+    grid.appendChild(addTile);
+    cardEls.push(addTile);
 
     clear(viewRoot);
     viewRoot.appendChild(grid);
@@ -1868,6 +1920,7 @@
   function flagSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3v18M6 4h11l-2 4 2 4H6" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'; }
   function layoutSVG() { return '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>'; }
   function noteSVG() { return '<svg viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 011 1v10a1 1 0 01-1 1H9l-4 4V5a1 1 0 011-1z" fill="currentColor"/></svg>'; }
+  function editSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function alertSVG() { return '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }

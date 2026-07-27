@@ -504,6 +504,29 @@
       return person;
     },
 
+    updatePerson: function (id, patch) {
+      var person = personById(id);
+      if (!person) return;
+      if (patch.name != null) { person.name = patch.name; person.initials = initials(patch.name); }
+      if (patch.role != null) person.role = patch.role;
+      emit({ type: 'person-update', id: id });
+      return person;
+    },
+
+    // Remove a person and cleanly unassign them everywhere: drop them from every
+    // project's assignees (a project left with none becomes unassigned) and clear
+    // any milestones they owned.
+    removePerson: function (id) {
+      state.people = state.people.filter(function (p) { return p.id !== id; });
+      state.projects.forEach(function (p) {
+        if (p.assigneeIds) p.assigneeIds = p.assigneeIds.filter(function (a) { return a !== id; });
+        if (!p.assigneeIds) p.assigneeIds = [];
+        p.ownerId = p.assigneeIds[0] || null;
+        (p.milestones || []).forEach(function (m) { if (m.assigneeId === id) m.assigneeId = null; });
+      });
+      emit({ type: 'person-remove', id: id });
+    },
+
     setProjectColor: function (id, color) {
       var p = projectById(id);
       if (!p) return;
