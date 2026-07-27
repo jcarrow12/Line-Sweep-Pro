@@ -193,7 +193,7 @@
       people: people,
       groups: groups,
       projects: projects,
-      settings: { atRiskDays: 3, defaults: defaultProjectDefaults() },
+      settings: { atRiskDays: 3, defaults: defaultProjectDefaults(), theme: 'auto', density: 'comfortable' },
       columns: defaultColumns(),
       milestonePresets: defaultPresets()
     };
@@ -261,6 +261,9 @@
         if (!saved.milestonePresets) saved.milestonePresets = defaultPresets();
         // New-project defaults are a later addition.
         if (saved.settings && !saved.settings.defaults) saved.settings.defaults = defaultProjectDefaults();
+        // Appearance prefs are a later addition.
+        if (saved.settings && !saved.settings.theme) saved.settings.theme = 'auto';
+        if (saved.settings && !saved.settings.density) saved.settings.density = 'comfortable';
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -649,6 +652,9 @@
       Object.keys(patch).forEach(function (k) { state.settings.defaults[k] = patch[k]; });
       emit({ type: 'settings' });
     },
+
+    setTheme: function (t) { state.settings.theme = t; emit({ type: 'appearance' }); },
+    setDensity: function (dn) { state.settings.density = dn; emit({ type: 'appearance' }); },
 
     // ---- Milestone presets ----
     addPreset: function (name, offset) {

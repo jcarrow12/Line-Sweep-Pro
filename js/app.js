@@ -1789,6 +1789,25 @@
     boardSec.appendChild(boardIn);
     wrap.appendChild(boardSec);
 
+    // ---- Appearance ---------------------------------------------------------
+    var appSec = section('Appearance');
+    var s0 = S.state.settings || {};
+    function segRow(labelText, options, current, onPick) {
+      var r = el('div', 'settings__row');
+      r.appendChild(el('label', 'settings__row-label', { text: labelText }));
+      var seg = el('div', 'seg');
+      options.forEach(function (o) {
+        var b = el('button', 'seg__btn' + (current === o[0] ? ' is-on' : ''), { text: o[1] });
+        b.addEventListener('click', function () { onPick(o[0]); });
+        seg.appendChild(b);
+      });
+      r.appendChild(seg);
+      return r;
+    }
+    appSec.appendChild(segRow('Theme', [['light', 'Light'], ['dark', 'Dark'], ['auto', 'Auto']], s0.theme || 'auto', function (v) { S.setTheme(v); }));
+    appSec.appendChild(segRow('Density', [['comfortable', 'Comfortable'], ['compact', 'Compact']], s0.density || 'comfortable', function (v) { S.setDensity(v); }));
+    wrap.appendChild(appSec);
+
     // ---- At-risk window -----------------------------------------------------
     var riskSec = section('“Due soon” window', 'Projects due within this many days are flagged as at-risk.');
     var riskRow = el('div', 'settings__inline');
@@ -2539,7 +2558,28 @@
     viewRoot.scrollTop = 0;
   }
 
+  // Apply theme (light/dark/auto) + density to the document root.
+  var appearanceApplied = '';
+  function applyAppearance(animate) {
+    var s = S.state.settings || {};
+    var theme = s.theme || 'auto';
+    var resolved = theme === 'auto'
+      ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
+    var key = resolved + '|' + (s.density || 'comfortable');
+    if (key === appearanceApplied) return;
+    var root = document.documentElement;
+    if (animate && appearanceApplied) {
+      root.classList.add('theme-animating');
+      setTimeout(function () { root.classList.remove('theme-animating'); }, 320);
+    }
+    root.setAttribute('data-theme', resolved);
+    root.classList.toggle('density-compact', (s.density || 'comfortable') === 'compact');
+    appearanceApplied = key;
+  }
+
   function render() {
+    applyAppearance(true);
     updateViewAsBanner();
     (VIEWS[currentView] || renderBoard)();
   }
@@ -2643,6 +2683,13 @@
   function clockSVG() { return '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }
 
   // ---- Boot -----------------------------------------------------------------
+  applyAppearance(false);
+  // Follow the OS light/dark setting while in 'auto'.
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onScheme = function () { if ((S.state.settings.theme || 'auto') === 'auto') { appearanceApplied = ''; applyAppearance(true); } };
+    if (mq.addEventListener) mq.addEventListener('change', onScheme); else if (mq.addListener) mq.addListener(onScheme);
+  }
   navTo('board');
 
   // Register service worker (only over http/https; ignored on file://).

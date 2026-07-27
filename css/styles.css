@@ -1133,3 +1133,63 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .settings__row-label { font-size: 13px; color: var(--nm-text-soft); font-weight: 600; min-width: 90px; }
 .settings__row .input--select, .settings__row .settings__inline { flex: 1; max-width: 280px; }
 .ms-presets__chip.is-on { color: #fff; background: var(--nm-accent); background-image: none; }
+
+/* ============================================================================
+   DARK THEME — override the neumorphic token set on a dark base.
+   ========================================================================== */
+:root[data-theme="dark"] {
+  --nm-base: #23262c;
+  --nm-grad: linear-gradient(145deg, #282c33 0%, #202329 100%);
+  --motion-lift-bg: #23262c;
+  --motion-lift-shadow: 0 12px 28px rgba(0,0,0,.55);
+  --nm-text: #e6e9f0;
+  --nm-text-soft: #98a2b3;
+  --nm-accent: #78a6df;
+  --bg: #23262c;
+  --surface: #23262c;
+  --ink: #e6e9f0;
+  --ink-soft: #98a2b3;
+  --blue: #78a6df;
+  --line: transparent;
+  --line-soft: rgba(255,255,255,.08);
+  --nm-raised: inset 1px 1px 1px rgba(255,255,255,.05), inset -1px -1px 1px rgba(0,0,0,.45), 9px 9px 20px rgba(0,0,0,.5), -9px -9px 20px rgba(255,255,255,.03);
+  --nm-raised-sm: inset 1px 1px 1px rgba(255,255,255,.05), inset -1px -1px 1px rgba(0,0,0,.45), 4px 4px 10px rgba(0,0,0,.45), -4px -4px 10px rgba(255,255,255,.03);
+  --nm-inset: inset 4px 4px 9px rgba(0,0,0,.5), inset -4px -4px 9px rgba(255,255,255,.035);
+  --nm-inset-sm: inset 2px 2px 5px rgba(0,0,0,.45), inset -2px -2px 5px rgba(255,255,255,.035);
+  --shadow-sm: var(--nm-raised-sm);
+  --shadow-md: var(--nm-raised);
+  --shadow-lg: var(--nm-raised);
+}
+/* Hardcoded light surfaces that tokens don't cover */
+:root[data-theme="dark"] .timeline__months { background: #1e2127; }
+:root[data-theme="dark"] .btn--soft { background: var(--nm-base); background-image: var(--nm-grad); color: var(--nm-text); box-shadow: var(--nm-raised-sm); }
+:root[data-theme="dark"] .btn--soft:hover { background: var(--nm-base); }
+:root[data-theme="dark"] .modal__close:hover { background: var(--nm-base); }
+:root[data-theme="dark"] .avatar--empty { background: #33363d; box-shadow: inset 0 0 0 2px #3d4048; color: #838a98; }
+:root[data-theme="dark"] .row:not(.row--header):not(.row--add):hover { background: rgba(255,255,255,.045); }
+:root[data-theme="dark"] .row--add:hover { background: rgba(255,255,255,.035); }
+:root[data-theme="dark"] .gdia { background: #e6e9f0; border-color: #23262c; }
+:root[data-theme="dark"] .kcard.is-col-dragging, :root[data-theme="dark"] .cell.is-col-dragging, :root[data-theme="dark"] .row.is-row-dragging { background: var(--nm-base); }
+/* Board name color chip already uses white text — fine on dark. */
+
+/* ============================================================================
+   COMPACT DENSITY
+   ========================================================================== */
+:root.density-compact .row { min-height: 42px; }
+:root.density-compact .cell { padding: 5px 12px; }
+:root.density-compact .cell:first-child { padding-left: 18px; }
+:root.density-compact .cell__name { font-size: 13px; }
+:root.density-compact .group { margin-bottom: 16px; }
+:root.density-compact .kcard { padding: 9px; }
+:root.density-compact .pcard { padding: 13px; }
+:root.density-compact .view-root { padding: 16px; }
+:root.density-compact .timeline__row { }
+
+/* ---- Segmented control (Settings) ----------------------------------------- */
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; box-shadow: var(--nm-inset-sm); background: var(--nm-base); }
+.seg__btn {
+  border: 0; background: transparent; cursor: pointer; padding: 6px 14px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; color: var(--nm-text-soft);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+.seg__btn.is-on { color: var(--nm-accent); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); }
