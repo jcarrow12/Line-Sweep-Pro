@@ -1120,3 +1120,10 @@ body { background: var(--nm-base); color: var(--nm-text); }
 }
 .ms-presets__chip:hover { transform: translateY(-1px); }
 .ms-presets__chip:active { transform: scale(.96); }
+
+/* Settings: categories manager */
+.cat-list { display: flex; flex-direction: column; gap: 8px; }
+.cat-row { display: grid; grid-template-columns: 26px 1fr auto 30px; align-items: center; gap: 10px; }
+.cat-row__dot { width: 22px; height: 22px; border: 0; border-radius: 50%; cursor: pointer; box-shadow: var(--nm-raised-sm); padding: 0; }
+.cat-row__dot:hover { transform: scale(1.1); }
+.cat-row__count { font-size: 12px; color: var(--nm-text-soft); white-space: nowrap; }

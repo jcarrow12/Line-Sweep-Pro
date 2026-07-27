@@ -474,6 +474,32 @@
       if (p) { p.groupId = groupId; emit({ type: 'move', id: id }); }
     },
 
+    // ---- Categories (groups) ----
+    addGroup: function (name, color) {
+      var g = { id: uid('grp'), name: name || 'New category', color: color || PROJECT_COLORS[state.groups.length % PROJECT_COLORS.length], collapsed: false };
+      state.groups.push(g);
+      emit({ type: 'group-add', id: g.id });
+      return g;
+    },
+    updateGroup: function (id, patch) {
+      var g = groupById(id);
+      if (!g) return;
+      if (patch.name != null) g.name = patch.name;
+      if (patch.color != null) g.color = patch.color;
+      emit({ type: 'group-update', id: id });
+    },
+    // Remove a category. Its projects move to another category. At least one
+    // category is always kept.
+    removeGroup: function (id) {
+      if (state.groups.length <= 1) return false;
+      var others = state.groups.filter(function (g) { return g.id !== id; });
+      var target = others[0];
+      state.projects.forEach(function (p) { if (p.groupId === id) p.groupId = target.id; });
+      state.groups = others;
+      emit({ type: 'group-remove', id: id });
+      return true;
+    },
+
     toggleMilestone: function (projectId, milestoneId) {
       var p = projectById(projectId);
       if (!p) return;

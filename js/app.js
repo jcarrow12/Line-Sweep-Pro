@@ -436,6 +436,24 @@
   function openRowColorMenu(anchor, p) {
     openPopover(anchor, function (pop) { buildColorSwatches(pop, p); });
   }
+  // Generic color chooser: preset swatches + the full picker. onPick(hex).
+  function openColorPopover(anchor, current, onPick) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--colors');
+      pop.appendChild(el('div', 'ctx-label', { text: 'Color' }));
+      var grid = el('div', 'color-grid');
+      S.PROJECT_COLORS.forEach(function (c) {
+        var sw = el('button', 'color-sw' + ((current || '').toLowerCase() === c.toLowerCase() ? ' is-on' : ''), { title: c });
+        sw.style.background = c;
+        sw.addEventListener('click', function () { onPick(c); closePopover(); });
+        grid.appendChild(sw);
+      });
+      pop.appendChild(grid);
+      pop.appendChild(el('div', 'ctx-sep'));
+      pop.appendChild(el('div', 'ctx-label', { text: 'Custom' }));
+      buildColorPicker(pop, current || '#5a63ad', function (hex, commit) { if (commit) onPick(hex); });
+    });
+  }
   function openRowColorMenuAt(x, y, p) {
     openContextMenuAt(x, y, function (pop) { buildColorSwatches(pop, p); });
   }
@@ -1804,6 +1822,33 @@
     addP.addEventListener('click', function () { S.addPreset('New milestone', 7); });
     presetSec.appendChild(addP);
     wrap.appendChild(presetSec);
+
+    // ---- Categories (groups) ------------------------------------------------
+    var catSec = section('Categories', 'The phase buckets on the board. Rename, recolor, add, or remove them. Removing one moves its projects into another category.');
+    var catList = el('div', 'cat-list');
+    S.state.groups.forEach(function (g) {
+      var count = S.projectsInGroup(g.id).length;
+      var row = el('div', 'cat-row');
+      var dot = el('button', 'cat-row__dot', { title: 'Change color' });
+      dot.style.background = g.color;
+      dot.addEventListener('click', function () { openColorPopover(dot, g.color, function (hex) { S.updateGroup(g.id, { color: hex }); }); });
+      var nameI = el('input', 'input input--sm', { type: 'text', value: g.name });
+      nameI.addEventListener('change', function () { if (nameI.value.trim()) S.updateGroup(g.id, { name: nameI.value.trim() }); });
+      var cnt = el('span', 'cat-row__count', { text: count + ' project' + (count === 1 ? '' : 's') });
+      var del = el('button', 'preset-row__del', { html: '&times;', title: 'Remove category' });
+      if (S.state.groups.length <= 1) del.disabled = true;
+      del.addEventListener('click', function () {
+        var msg = count ? ('Remove “' + g.name + '”? Its ' + count + ' project' + (count === 1 ? '' : 's') + ' will move to another category.') : ('Remove “' + g.name + '”?');
+        if (confirm(msg)) S.removeGroup(g.id);
+      });
+      row.appendChild(dot); row.appendChild(nameI); row.appendChild(cnt); row.appendChild(del);
+      catList.appendChild(row);
+    });
+    catSec.appendChild(catList);
+    var addCat = el('button', 'btn btn--soft settings__add', { text: '+ Add category' });
+    addCat.addEventListener('click', function () { S.addGroup('New category'); });
+    catSec.appendChild(addCat);
+    wrap.appendChild(catSec);
 
     // ---- Backup & restore ---------------------------------------------------
     var backupSec = section('Backup & restore', 'Everything lives on this device. Download a backup to keep it safe — or to move your board between your computers — and restore it here.');
