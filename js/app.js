@@ -16,6 +16,36 @@
   var query = '';
   var timelineFilter = null;   // null = everyone; otherwise a person id
   var viewAs = null;           // self-view: null = manager (all); otherwise a person id
+  var boardFilter = { owners: [], statuses: [], priorities: [], risk: null };
+  var boardSort = 'manual';
+
+  function activeFilterCount() {
+    var f = boardFilter;
+    return f.owners.length + f.statuses.length + f.priorities.length + (f.risk ? 1 : 0);
+  }
+  function passesFilter(p) {
+    var f = boardFilter;
+    if (f.owners.length && !f.owners.some(function (id) { return (p.assigneeIds || []).indexOf(id) !== -1; })) return false;
+    if (f.statuses.length && f.statuses.indexOf(p.status) === -1) return false;
+    if (f.priorities.length && f.priorities.indexOf(p.priority) === -1) return false;
+    if (f.risk) {
+      var lvl = S.projectHealth(p).level;
+      if (f.risk === 'atrisk' && lvl !== 'risk' && lvl !== 'overdue') return false;
+      if (f.risk === 'overdue' && lvl !== 'overdue') return false;
+    }
+    return true;
+  }
+  function sortProjects(list) {
+    if (boardSort === 'manual') return list;
+    var arr = list.slice();
+    if (boardSort === 'due') arr.sort(function (a, b) { return a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0); });
+    else if (boardSort === 'start') arr.sort(function (a, b) { return a.startDate < b.startDate ? -1 : (a.startDate > b.startDate ? 1 : 0); });
+    else if (boardSort === 'progress') arr.sort(function (a, b) { return b.progress - a.progress; });
+    else if (boardSort === 'name') arr.sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
+    else if (boardSort === 'priority') { var ord = { critical: 0, high: 1, medium: 2, low: 3 }; arr.sort(function (a, b) { return (ord[a.priority] == null ? 9 : ord[a.priority]) - (ord[b.priority] == null ? 9 : ord[b.priority]); }); }
+    return arr;
+  }
+  var SORT_LABELS = { manual: 'Manual order', due: 'Due date', start: 'Start date', progress: 'Progress', priority: 'Priority', name: 'Name (A–Z)' };
 
   // A project is in scope when it matches the search AND (if a self-view persona
   // is active) that person is one of its assignees.
@@ -484,6 +514,131 @@
     return hay.indexOf(query.toLowerCase()) !== -1;
   }
 
+  // ---- Board filter / sort / saved views ------------------------------------
+  function buildBoardToolbar() {
+    var bar = el('div', 'board-toolbar');
+
+    // Filter
+    var fCount = activeFilterCount();
+    var fBtn = el('button', 'tb-btn' + (fCount ? ' is-active' : ''));
+    fBtn.appendChild(el('span', 'tb-btn__icon', { html: filterSVG() }));
+    fBtn.appendChild(el('span', null, { text: 'Filter' }));
+    if (fCount) fBtn.appendChild(el('span', 'tb-btn__badge', { text: '' + fCount }));
+    fBtn.addEventListener('click', function () { openFilterMenu(fBtn); });
+    bar.appendChild(fBtn);
+
+    // Sort
+    var sBtn = el('button', 'tb-btn' + (boardSort !== 'manual' ? ' is-active' : ''));
+    sBtn.appendChild(el('span', 'tb-btn__icon', { html: sortSVG() }));
+    sBtn.appendChild(el('span', null, { text: boardSort === 'manual' ? 'Sort' : 'Sort: ' + SORT_LABELS[boardSort] }));
+    sBtn.addEventListener('click', function () { openSortMenu(sBtn); });
+    bar.appendChild(sBtn);
+
+    // Saved views
+    var vBtn = el('button', 'tb-btn');
+    vBtn.appendChild(el('span', 'tb-btn__icon', { html: bookmarkSVG() }));
+    vBtn.appendChild(el('span', null, { text: 'Views' }));
+    vBtn.addEventListener('click', function () { openViewsMenu(vBtn); });
+    bar.appendChild(vBtn);
+
+    // Clear (only when something is active)
+    if (fCount || boardSort !== 'manual') {
+      var clr = el('button', 'tb-btn tb-btn--ghost', { text: 'Clear' });
+      clr.addEventListener('click', function () { boardFilter = { owners: [], statuses: [], priorities: [], risk: null }; boardSort = 'manual'; renderBoard(); });
+      bar.appendChild(clr);
+    }
+    return bar;
+  }
+
+  // Apply a live filter change: re-render the board, then reopen the filter
+  // menu on the freshly-built toolbar button so it stays put.
+  function applyFilterChange() {
+    renderBoard();
+    var btn = viewRoot.querySelector('.board-toolbar .tb-btn');
+    if (btn) openFilterMenu(btn);
+  }
+  function openFilterMenu(anchor) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--filter');
+      function group(title, opts, selected, onToggle) {
+        pop.appendChild(el('div', 'ctx-label', { text: title }));
+        var row = el('div', 'filter-chips');
+        opts.forEach(function (o) {
+          var on = selected.indexOf(o.value) !== -1;
+          var chip = el('button', 'filter-chip' + (on ? ' is-on' : ''), { text: o.label });
+          chip.addEventListener('click', function () { onToggle(o.value); applyFilterChange(); });
+          row.appendChild(chip);
+        });
+        pop.appendChild(row);
+      }
+      function tog(arr, v) { var i = arr.indexOf(v); if (i === -1) arr.push(v); else arr.splice(i, 1); }
+      group('Owner', S.state.people.map(function (pe) { return { value: pe.id, label: pe.name.split(' ')[0] }; }), boardFilter.owners, function (v) { tog(boardFilter.owners, v); });
+      group('Status', S.STATUSES.map(function (s) { return { value: s.id, label: s.label }; }), boardFilter.statuses, function (v) { tog(boardFilter.statuses, v); });
+      group('Priority', S.PRIORITIES.map(function (s) { return { value: s.id, label: s.label }; }), boardFilter.priorities, function (v) { tog(boardFilter.priorities, v); });
+      pop.appendChild(el('div', 'ctx-label', { text: 'Health' }));
+      var hrow = el('div', 'filter-chips');
+      [['atrisk', 'At risk or overdue'], ['overdue', 'Overdue only']].forEach(function (o) {
+        var on = boardFilter.risk === o[0];
+        var chip = el('button', 'filter-chip' + (on ? ' is-on' : ''), { text: o[1] });
+        chip.addEventListener('click', function () { boardFilter.risk = on ? null : o[0]; applyFilterChange(); });
+        hrow.appendChild(chip);
+      });
+      pop.appendChild(hrow);
+      if (activeFilterCount()) {
+        pop.appendChild(el('div', 'ctx-sep'));
+        var reset = el('button', 'ctx-item', { text: 'Clear filters' });
+        reset.addEventListener('click', function () { boardFilter = { owners: [], statuses: [], priorities: [], risk: null }; closePopover(); renderBoard(); });
+        pop.appendChild(reset);
+      }
+    });
+  }
+
+  function openSortMenu(anchor) {
+    openPopover(anchor, function (pop) {
+      Object.keys(SORT_LABELS).forEach(function (k) {
+        var item = el('button', 'ctx-item ctx-item--check' + (boardSort === k ? ' is-on' : ''));
+        item.appendChild(el('span', 'ctx-check', { html: boardSort === k ? checkSVG() : '' }));
+        item.appendChild(el('span', 'ctx-item__label', { text: SORT_LABELS[k] }));
+        item.addEventListener('click', function () { boardSort = k; closePopover(); renderBoard(); });
+        pop.appendChild(item);
+      });
+    });
+  }
+
+  function openViewsMenu(anchor) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--menu');
+      var views = S.state.savedViews || [];
+      if (views.length) {
+        pop.appendChild(el('div', 'ctx-label', { text: 'Saved views' }));
+        views.forEach(function (v) {
+          var row = el('div', 'view-row');
+          var openBtn = el('button', 'view-row__open', { text: v.name });
+          openBtn.addEventListener('click', function () {
+            boardFilter = { owners: (v.filter.owners || []).slice(), statuses: (v.filter.statuses || []).slice(), priorities: (v.filter.priorities || []).slice(), risk: v.filter.risk || null };
+            boardSort = v.sort || 'manual';
+            closePopover(); renderBoard();
+          });
+          var del = el('button', 'view-row__del', { html: '&times;', title: 'Delete view' });
+          del.addEventListener('click', function (e) { e.stopPropagation(); S.removeSavedView(v.id); openViewsMenu(anchor); });
+          row.appendChild(openBtn); row.appendChild(del);
+          pop.appendChild(row);
+        });
+        pop.appendChild(el('div', 'ctx-sep'));
+      }
+      var save = el('button', 'ctx-item', { text: '＋ Save current view…' });
+      save.addEventListener('click', function () {
+        var name = prompt('Name this view:');
+        if (name && name.trim()) {
+          S.addSavedView(name.trim(), { filter: { owners: boardFilter.owners.slice(), statuses: boardFilter.statuses.slice(), priorities: boardFilter.priorities.slice(), risk: boardFilter.risk }, sort: boardSort });
+          toast('View saved', 'success');
+        }
+        closePopover();
+      });
+      pop.appendChild(save);
+    });
+  }
+
   function renderBoard() {
     viewTitle.textContent = S.state.board.name;
     var st = S.stats();
@@ -491,6 +646,7 @@
       st.overdue + ' overdue · ' + st.avgProgress + '% avg progress';
 
     var root = el('div', 'board');
+    if (boardSort !== 'manual') root.classList.add('is-sorted');
     // Project-name appearance (color / grey / dark greyscale).
     var nameStyle = (S.state.settings && S.state.settings.nameStyle) || 'color';
     if (nameStyle === 'grey') root.classList.add('names-grey');
@@ -499,11 +655,12 @@
     // Build the grid track list from the visible columns (name column fixed).
     var cols = S.visibleColumns();
     root.style.setProperty('--cols', 'minmax(200px,2.2fr) ' + cols.map(function (c) { return c.width; }).join(' '));
+    root.appendChild(buildBoardToolbar());
     var rowEls = [];
 
     S.state.groups.forEach(function (group) {
-      var projects = S.projectsInGroup(group.id).filter(inScope);
-      if ((query || viewAs) && !projects.length) return;
+      var projects = sortProjects(S.projectsInGroup(group.id).filter(inScope).filter(passesFilter));
+      if ((query || viewAs || activeFilterCount()) && !projects.length) return;
 
       var section = el('section', 'group', { 'data-group': group.id });
       section.style.setProperty('--group', group.color);
@@ -545,7 +702,7 @@
         rowEls.push(row);
       });
 
-      initProjectSort(body, group.id);
+      if (boardSort === 'manual') initProjectSort(body, group.id);
 
       // add-row
       var addRow = el('button', 'row row--add', { html: '<span class="cell">+ Add project</span>' });
@@ -2761,6 +2918,9 @@
   function layoutSVG() { return '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>'; }
   function noteSVG() { return '<svg viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 011 1v10a1 1 0 01-1 1H9l-4 4V5a1 1 0 011-1z" fill="currentColor"/></svg>'; }
   function editSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg>'; }
+  function filterSVG() { return '<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'; }
+  function sortSVG() { return '<svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l-3 3M17 20l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+  function bookmarkSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function alertSVG() { return '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }

@@ -1223,3 +1223,38 @@ body { background: var(--nm-base); color: var(--nm-text); }
 
 /* Settings: status/priority label+color rows (no count/delete column) */
 .cat-row--lc { grid-template-columns: 26px 1fr; }
+
+/* ---- Board toolbar: filter / sort / saved views --------------------------- */
+.board-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.tb-btn {
+  display: inline-flex; align-items: center; gap: 7px; border: 0; cursor: pointer;
+  padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--nm-text-soft);
+  background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+  transition: transform var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.tb-btn:hover { transform: translateY(-1px); color: var(--nm-text); }
+.tb-btn.is-active { color: var(--nm-accent); }
+.tb-btn__icon { display: inline-flex; }
+.tb-btn__icon svg { width: 15px; height: 15px; }
+.tb-btn__badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--nm-accent); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.tb-btn--ghost { background: transparent; background-image: none; box-shadow: none; color: var(--nm-text-soft); }
+.tb-btn--ghost:hover { color: #b04e5b; }
+
+/* Sorted board hides the manual drag grips */
+.board.is-sorted .row-grip { display: none; }
+
+/* Filter popover */
+.popover--filter { min-width: 260px; max-width: 300px; padding: 10px; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.filter-chip {
+  border: 0; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--nm-text-soft);
+  padding: 5px 10px; border-radius: 999px; background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+}
+.filter-chip.is-on { color: var(--nm-accent); box-shadow: var(--nm-inset-sm); }
+
+/* Saved views rows */
+.view-row { display: flex; align-items: center; gap: 6px; }
+.view-row__open { flex: 1; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 13px; color: var(--nm-text); font-weight: 500; }
+.view-row__open:hover { background: rgba(156,165,178,.12); }
+.view-row__del { border: 0; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 8px; font-size: 16px; color: var(--nm-text-soft); }
+.view-row__del:hover { color: #b04e5b; }

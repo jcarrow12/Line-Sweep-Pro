@@ -197,7 +197,8 @@
       columns: defaultColumns(),
       milestonePresets: defaultPresets(),
       statuses: cloneList(STATUSES),
-      priorities: cloneList(PRIORITIES)
+      priorities: cloneList(PRIORITIES),
+      savedViews: []
     };
   }
 
@@ -276,6 +277,8 @@
         else STATUSES.forEach(function (d) { if (!saved.statuses.some(function (s) { return s.id === d.id; })) saved.statuses.push({ id: d.id, label: d.label, color: d.color }); });
         if (!saved.priorities) saved.priorities = cloneList(PRIORITIES);
         else PRIORITIES.forEach(function (d) { if (!saved.priorities.some(function (s) { return s.id === d.id; })) saved.priorities.push({ id: d.id, label: d.label, color: d.color }); });
+        // Saved board views are a later addition.
+        if (!saved.savedViews) saved.savedViews = [];
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -687,6 +690,19 @@
       if (patch.label != null) s.label = patch.label;
       if (patch.color != null) s.color = patch.color;
       emit({ type: 'priorities' });
+    },
+
+    // Saved board views (filter + sort snapshots).
+    addSavedView: function (name, config) {
+      if (!state.savedViews) state.savedViews = [];
+      var v = { id: uid('view'), name: name || 'View', filter: config.filter || {}, sort: config.sort || 'manual' };
+      state.savedViews.push(v);
+      emit({ type: 'views' });
+      return v;
+    },
+    removeSavedView: function (id) {
+      state.savedViews = (state.savedViews || []).filter(function (v) { return v.id !== id; });
+      emit({ type: 'views' });
     },
 
     // ---- Milestone presets ----
