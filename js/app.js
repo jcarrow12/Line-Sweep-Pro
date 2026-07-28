@@ -1985,6 +1985,64 @@
   }
 
   // ==========================================================================
+  //  TODAY — the morning glance: overdue, due today, this week
+  // ==========================================================================
+
+  function renderToday() {
+    viewTitle.textContent = 'Today';
+    var today = S.todayISO();
+    var dt = new Date(today + 'T00:00:00');
+    viewSubtitle.textContent = dt.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+    var items = [];
+    scopedProjects().forEach(function (p) {
+      if (p.status !== 'done') items.push({ kind: 'project', project: p, date: p.dueDate, inDays: S.daysBetween(today, p.dueDate), label: p.name, sub: 'Project due' });
+      (p.milestones || []).forEach(function (m) {
+        if (m.done) return;
+        items.push({ kind: 'ms', project: p, milestone: m, date: m.date, inDays: S.daysBetween(today, m.date), label: m.name, sub: p.name });
+      });
+    });
+    function bucket(pred) { return items.filter(pred).sort(function (a, b) { return a.inDays - b.inDays || (a.date < b.date ? -1 : 1); }); }
+    var overdue = bucket(function (x) { return x.inDays < 0; });
+    var todayItems = bucket(function (x) { return x.inDays === 0; });
+    var week = bucket(function (x) { return x.inDays >= 1 && x.inDays <= 7; });
+
+    var wrap = el('div', 'today');
+    function block(title, arr, tone) {
+      var sec = el('div', 'today__sec');
+      var h = el('div', 'today__sec-head');
+      h.appendChild(el('span', 'today__sec-title', { text: title }));
+      h.appendChild(el('span', 'today__sec-count' + (tone ? ' is-' + tone : ''), { text: '' + arr.length }));
+      sec.appendChild(h);
+      if (!arr.length) sec.appendChild(el('div', 'today__empty', { text: title === 'Overdue' ? 'Nothing overdue — nice.' : 'Nothing here.' }));
+      arr.forEach(function (x) {
+        var row = el('button', 'today__item', { onclick: function () { openEditor(x.project.id); } });
+        var dot = el('span', 'today__dot'); dot.style.background = x.project.color || '#5a63ad';
+        row.appendChild(dot);
+        var mid = el('div', 'today__mid');
+        var lab = el('div', 'today__label');
+        if (x.kind === 'ms') { var fl = el('span', 'today__flag'); fl.innerHTML = flagSVG(); lab.appendChild(fl); }
+        lab.appendChild(el('span', null, { text: x.label }));
+        mid.appendChild(lab);
+        mid.appendChild(el('div', 'today__sub', { text: x.sub }));
+        row.appendChild(mid);
+        row.appendChild(avatarStack(x.project.assigneeIds, 22));
+        var when = el('div', 'today__when', { text: x.inDays < 0 ? Math.abs(x.inDays) + 'd late' : (x.inDays === 0 ? 'Today' : 'in ' + x.inDays + 'd') });
+        if (x.inDays < 0) when.classList.add('is-late'); else if (x.inDays <= 2) when.classList.add('is-soon');
+        row.appendChild(when);
+        sec.appendChild(row);
+      });
+      return sec;
+    }
+    wrap.appendChild(block('Overdue', overdue, 'late'));
+    wrap.appendChild(block('Today', todayItems, 'soon'));
+    wrap.appendChild(block('This week', week));
+    clear(viewRoot);
+    viewRoot.appendChild(wrap);
+    M.stagger(wrap.querySelectorAll('.today__item'), { step: 18, y: 8 });
+  }
+
+  // ==========================================================================
   //  SETTINGS
   // ==========================================================================
 
@@ -2894,7 +2952,7 @@
   //  Navigation & wiring
   // ==========================================================================
 
-  var VIEWS = { board: renderBoard, timeline: renderTimeline, kanban: renderKanban, people: renderPeople, dashboard: renderDashboard, reports: renderReports, settings: renderSettings };
+  var VIEWS = { today: renderToday, board: renderBoard, timeline: renderTimeline, kanban: renderKanban, people: renderPeople, dashboard: renderDashboard, reports: renderReports, settings: renderSettings };
 
   function navTo(view) {
     if (!VIEWS[view]) view = 'board';
@@ -2966,7 +3024,7 @@
   // ---- Command palette (Cmd/Ctrl-K) -----------------------------------------
   function paletteCommands() {
     var cmds = [];
-    [['board', 'Board'], ['timeline', 'Timeline'], ['kanban', 'Kanban'], ['people', 'Team'], ['dashboard', 'Insights'], ['reports', 'Reports'], ['settings', 'Settings']].forEach(function (v) {
+    [['today', 'Today'], ['board', 'Board'], ['timeline', 'Timeline'], ['kanban', 'Kanban'], ['people', 'Team'], ['dashboard', 'Insights'], ['reports', 'Reports'], ['settings', 'Settings']].forEach(function (v) {
       cmds.push({ label: 'Go to ' + v[1], kind: 'view', run: function () { navTo(v[0]); } });
     });
     cmds.push({ label: 'New project', kind: 'action', run: function () { openEditor(null); } });

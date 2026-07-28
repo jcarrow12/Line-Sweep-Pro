@@ -1304,3 +1304,22 @@ body { background: var(--nm-base); color: var(--nm-text); }
 }
 .ms-editor__dep svg { width: 13px; height: 13px; }
 .ms-editor__dep.is-on { color: var(--nm-accent); box-shadow: var(--nm-inset-sm); }
+
+/* ---- Today view ----------------------------------------------------------- */
+.today { max-width: 780px; display: flex; flex-direction: column; gap: 18px; }
+.today__sec { background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm); border-radius: 16px; padding: 10px 12px; }
+.today__sec-head { display: flex; align-items: center; gap: 10px; padding: 6px 8px 8px; }
+.today__sec-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--nm-text-soft); }
+.today__sec-count { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); color: var(--nm-text-soft); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.today__sec-count.is-late { color: #fff; background: #b04e5b; box-shadow: none; }
+.today__sec-count.is-soon { color: #fff; background: #b58234; box-shadow: none; }
+.today__empty { padding: 12px 8px; color: var(--nm-text-soft); font-size: 13px; }
+.today__item { display: grid; grid-template-columns: 10px 1fr auto auto; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; text-align: left; padding: 10px 8px; border-radius: 12px; cursor: pointer; }
+.today__item:hover { background: rgba(156,165,178,.12); }
+.today__dot { width: 10px; height: 10px; border-radius: 50%; }
+.today__label { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--nm-text); }
+.today__flag { width: 14px; height: 14px; color: var(--nm-text-soft); flex: none; }
+.today__flag svg { width: 14px; height: 14px; }
+.today__sub { font-size: 12px; color: var(--nm-text-soft); margin-top: 2px; }
+.today__when { font-size: 12.5px; font-weight: 700; color: var(--nm-text-soft); white-space: nowrap; }
+.today__when.is-late { color: #b04e5b; } .today__when.is-soon { color: #b58234; }
