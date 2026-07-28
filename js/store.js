@@ -301,9 +301,26 @@
     try { global.localStorage.setItem(KEY, JSON.stringify(s || state)); } catch (e) {}
   }
 
+  // ---- Undo / redo (whole-state snapshots) ----------------------------------
+  var undoStack = [JSON.stringify(state)], redoStack = [], restoring = false;
+  var UNDO_MAX = 60;
+
   function emit(meta) {
     persist();
+    if (!restoring) {
+      undoStack.push(JSON.stringify(state));
+      if (undoStack.length > UNDO_MAX) undoStack.shift();
+      redoStack = [];
+    }
     listeners.forEach(function (fn) { fn(state, meta || {}); });
+  }
+
+  function restore(json, type) {
+    restoring = true;
+    state = JSON.parse(json);
+    persist();
+    listeners.forEach(function (fn) { fn(state, { type: type }); });
+    restoring = false;
   }
 
   // ---- Selectors ------------------------------------------------------------
@@ -835,6 +852,22 @@
       state = seed();
       persist();
       emit({ type: 'reset' });
+    },
+
+    canUndo: function () { return undoStack.length > 1; },
+    canRedo: function () { return redoStack.length > 0; },
+    undo: function () {
+      if (undoStack.length < 2) return false;
+      redoStack.push(undoStack.pop());
+      restore(undoStack[undoStack.length - 1], 'undo');
+      return true;
+    },
+    redo: function () {
+      if (!redoStack.length) return false;
+      var next = redoStack.pop();
+      undoStack.push(next);
+      restore(next, 'redo');
+      return true;
     },
 
     // Replace the whole board from a backup file. Validates the essentials and

@@ -2970,6 +2970,8 @@
       cmds.push({ label: 'Go to ' + v[1], kind: 'view', run: function () { navTo(v[0]); } });
     });
     cmds.push({ label: 'New project', kind: 'action', run: function () { openEditor(null); } });
+    if (S.canUndo()) cmds.push({ label: 'Undo last change', kind: 'action', run: function () { if (S.undo()) toast('Undone', 'info'); } });
+    if (S.canRedo()) cmds.push({ label: 'Redo', kind: 'action', run: function () { if (S.redo()) toast('Redone', 'info'); } });
     cmds.push({ label: 'Upcoming milestones', kind: 'action', run: function () { var b = document.getElementById('reminderBtn'); if (b) openReminders(b); } });
     cmds.push({ label: 'Toggle theme (light / dark)', kind: 'action', run: function () { var t = (S.state.settings.theme || 'auto'); S.setTheme(t === 'dark' ? 'light' : 'dark'); } });
     cmds.push({ label: 'Toggle density (comfortable / compact)', kind: 'action', run: function () { var dn = (S.state.settings.density || 'comfortable'); S.setDensity(dn === 'compact' ? 'comfortable' : 'compact'); } });
@@ -3139,12 +3141,22 @@
     if (bell) bell.addEventListener('click', function () { openReminders(bell); });
   })();
 
-  // Global keyboard shortcuts: Cmd/Ctrl-K palette, N new project, / search.
+  // Global keyboard shortcuts: Cmd/Ctrl-K palette, Cmd/Ctrl-Z undo, N new, / search.
   document.addEventListener('keydown', function (e) {
     var mod = e.metaKey || e.ctrlKey;
     if (mod && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openPalette(); return; }
     var t = (e.target && e.target.tagName) || '';
     var typing = t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || (e.target && e.target.isContentEditable);
+    // Undo / redo — but not while typing (let the field's own undo work), and not
+    // while a modal is open (its edits are a separate draft).
+    if (mod && (e.key === 'z' || e.key === 'Z')) {
+      if (typing || !modalHost.hidden) return;
+      e.preventDefault();
+      if (e.shiftKey) { if (S.redo()) toast('Redone', 'info'); }
+      else { if (S.undo()) toast('Undone', 'info'); }
+      return;
+    }
+    if (mod && (e.key === 'y' || e.key === 'Y')) { if (typing || !modalHost.hidden) return; e.preventDefault(); if (S.redo()) toast('Redone', 'info'); return; }
     if (typing || mod || e.altKey) return;
     if (!modalHost.hidden || document.querySelector('.cmdk')) return; // modal/palette open
     if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openEditor(null); }
