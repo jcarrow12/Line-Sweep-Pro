@@ -402,7 +402,7 @@ svg { display: block; }
 .form-grid .field { margin-bottom: 0; }
 
 .ms-editor { display: flex; flex-direction: column; gap: 8px; }
-.ms-editor__row { display: grid; grid-template-columns: 16px 18px minmax(70px, 1fr) 132px 92px 28px; align-items: center; gap: 7px; border-radius: 10px; }
+.ms-editor__row { display: grid; grid-template-columns: 16px 18px minmax(60px, 1fr) 124px 84px 26px 26px; align-items: center; gap: 6px; border-radius: 10px; }
 /* No drop-indicator bar — the lifted row is the cue (Rundown style). */
 .ms-editor__row.is-dragging { opacity: 1; transform: scale(1.01); background: var(--nm-base); box-shadow: 0 8px 22px rgba(60,72,110,.18); border-radius: 12px; position: relative; z-index: 2; }
 .ms-editor__handle { display: flex; align-items: center; justify-content: center; width: 16px; color: var(--ink-soft); cursor: grab; touch-action: none; }
@@ -1295,3 +1295,12 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .popover--menu a.menu-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .links-editor { display: flex; flex-direction: column; gap: 7px; }
 .link-row { display: grid; grid-template-columns: 100px 1fr 28px; align-items: center; gap: 7px; }
+
+/* Milestone dependency button */
+.ms-editor__dep {
+  width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--nm-text-soft); background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised-sm);
+}
+.ms-editor__dep svg { width: 13px; height: 13px; }
+.ms-editor__dep.is-on { color: var(--nm-accent); box-shadow: var(--nm-inset-sm); }

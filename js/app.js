@@ -20,6 +20,20 @@
   var boardSort = 'manual';
   var editorKeyHandler = null;
 
+  // Enforce milestone dependencies: a dependent's date is bumped to at least its
+  // prerequisite's date, cascading downstream. Cycle-safe (capped passes).
+  function cascadeDeps(ms) {
+    var byId = {};
+    ms.forEach(function (m) { byId[m.id] = m; });
+    for (var pass = 0; pass < ms.length + 1; pass++) {
+      var changed = false;
+      ms.forEach(function (m) {
+        if (m.dependsOn && byId[m.dependsOn] && m.date < byId[m.dependsOn].date) { m.date = byId[m.dependsOn].date; changed = true; }
+      });
+      if (!changed) break;
+    }
+  }
+
   // Build new-project editor seed data from a template.
   function templateSeed(t) {
     var today = S.todayISO();
@@ -493,6 +507,21 @@
     });
   }
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function openDepMenu(anchor, p, m, onDone) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--menu');
+      pop.appendChild(el('div', 'popover__label', { text: 'Starts after' }));
+      var none = el('button', 'menu-opt' + (!m.dependsOn ? ' is-on' : ''), { text: '— No dependency' });
+      none.addEventListener('click', function () { m.dependsOn = null; closePopover(); cascadeDeps(p.milestones); if (onDone) onDone(); });
+      pop.appendChild(none);
+      p.milestones.forEach(function (other) {
+        if (other.id === m.id) return;
+        var b = el('button', 'menu-opt' + (m.dependsOn === other.id ? ' is-on' : ''), { text: other.name || '(unnamed milestone)' });
+        b.addEventListener('click', function () { m.dependsOn = other.id; closePopover(); cascadeDeps(p.milestones); if (onDone) onDone(); });
+        pop.appendChild(b);
+      });
+    });
+  }
   // Generic color chooser: preset swatches + the full picker. onPick(hex).
   function openColorPopover(anchor, current, onPick) {
     openPopover(anchor, function (pop) {
@@ -2736,6 +2765,7 @@
         var name = el('input', 'input input--sm', { type: 'text', value: m.name, placeholder: 'Milestone' });
         name.addEventListener('input', function () { m.name = name.value; });
         var date = el('input', 'input input--sm input--date', { type: 'date', value: m.date });
+        date.addEventListener('change', function () { m.date = date.value; cascadeDeps(p.milestones); renderMsEditor(); });
         date.addEventListener('input', function () { m.date = date.value; });
 
         // Who owns this milestone: "Everyone" (project-level) or one assignee.
@@ -2748,12 +2778,18 @@
         who.value = m.assigneeId || '';
         who.addEventListener('change', function () { m.assigneeId = who.value || null; });
 
+        // Dependency: "starts after" another milestone.
+        var preName = m.dependsOn ? (p.milestones.filter(function (x) { return x.id === m.dependsOn; })[0] || {}).name : '';
+        var dep = el('button', 'ms-editor__dep' + (m.dependsOn ? ' is-on' : ''), { html: linkSVG(), title: m.dependsOn ? ('Starts after: ' + (preName || 'another milestone')) : 'Set a dependency', type: 'button' });
+        dep.addEventListener('click', function (e) { e.stopPropagation(); openDepMenu(dep, p, m, renderMsEditor); });
+
         var del = el('button', 'ms-editor__del', { html: '&times;', onclick: function () {
           p.milestones = p.milestones.filter(function (x) { return x.id !== m.id; });
+          p.milestones.forEach(function (x) { if (x.dependsOn === m.id) x.dependsOn = null; }); // clear dangling deps
           renderMsEditor();
         } });
         rowm.appendChild(handle); rowm.appendChild(chk); rowm.appendChild(name);
-        rowm.appendChild(date); rowm.appendChild(who); rowm.appendChild(del);
+        rowm.appendChild(date); rowm.appendChild(who); rowm.appendChild(dep); rowm.appendChild(del);
         msList.appendChild(rowm);
       });
       var add = el('button', 'ms-editor__add', { text: '+ Add milestone', onclick: function () {
@@ -2802,6 +2838,7 @@
     setTimeout(function () { nameInput.focus(); }, 60);
 
     function save() {
+      cascadeDeps(p.milestones);
       var data = {
         name: nameInput.value.trim() || 'Untitled project',
         groupId: groupSel.value,
