@@ -481,6 +481,18 @@
   function openRowColorMenu(anchor, p) {
     openPopover(anchor, function (pop) { buildColorSwatches(pop, p); });
   }
+  function openLinksMenu(anchor, p) {
+    openPopover(anchor, function (pop) {
+      pop.classList.add('popover--menu');
+      pop.appendChild(el('div', 'popover__label', { text: 'Reference links' }));
+      (p.links || []).forEach(function (l) {
+        var a = el('a', 'menu-opt', { href: l.url, target: '_blank', rel: 'noopener noreferrer', html: linkSVG() + '<span>' + (l.label ? escapeHtml(l.label) : escapeHtml(l.url)) + '</span>' });
+        a.addEventListener('click', function () { closePopover(); });
+        pop.appendChild(a);
+      });
+    });
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   // Generic color chooser: preset swatches + the full picker. onPick(hex).
   function openColorPopover(anchor, current, onPick) {
     openPopover(anchor, function (pop) {
@@ -1111,6 +1123,11 @@
     nameBtn.addEventListener('click', function () { openEditor(p.id); });
     nameCell.appendChild(rgrip);
     nameCell.appendChild(nameBtn);
+    if (p.links && p.links.length) {
+      var lb = el('button', 'name-link', { html: linkSVG(), title: p.links.length + ' reference link' + (p.links.length > 1 ? 's' : '') });
+      lb.addEventListener('click', function (e) { e.stopPropagation(); openLinksMenu(lb, p); });
+      nameCell.appendChild(lb);
+    }
     nameCell.addEventListener('contextmenu', function (e) {
       e.preventDefault(); openRowColorMenuAt(e.clientX, e.clientY, p);
     });
@@ -2432,6 +2449,7 @@
     }
     // work on a deep-ish copy of milestones
     p.milestones = (p.milestones || []).map(function (m) { return Object.assign({}, m); });
+    p.links = (p.links || []).map(function (l) { return Object.assign({}, l); });
 
     var backdrop = el('div', 'modal-backdrop');
     var panel = el('div', 'modal');
@@ -2547,8 +2565,31 @@
     paneMain.appendChild(progWrap);
 
     // Notes
-    var notesInput = field(paneMain, 'Notes', el('textarea', 'input input--area', { rows: '3', placeholder: 'Context, blockers, links…' }));
+    var notesInput = field(paneMain, 'Notes', el('textarea', 'input input--area', { rows: '3', placeholder: 'Context, blockers…' }));
     notesInput.value = p.notes;
+
+    // Reference links (Frame.io, Drive, brief, …)
+    var linksField = el('div', 'field');
+    linksField.appendChild(el('label', 'field__label', { text: 'Reference links' }));
+    var linksList = el('div', 'links-editor');
+    linksField.appendChild(linksList);
+    function renderLinks() {
+      clear(linksList);
+      p.links.forEach(function (l) {
+        var row = el('div', 'link-row');
+        var lab = el('input', 'input input--sm', { type: 'text', value: l.label, placeholder: 'Label' });
+        lab.addEventListener('input', function () { l.label = lab.value; });
+        var url = el('input', 'input input--sm', { type: 'url', value: l.url, placeholder: 'https://…' });
+        url.addEventListener('input', function () { l.url = url.value; });
+        var del = el('button', 'ms-editor__del', { html: '&times;', onclick: function () { p.links = p.links.filter(function (x) { return x !== l; }); renderLinks(); } });
+        row.appendChild(lab); row.appendChild(url); row.appendChild(del);
+        linksList.appendChild(row);
+      });
+      var add = el('button', 'ms-editor__add', { text: '+ Add link', onclick: function () { p.links.push({ id: 'ln_' + Math.random().toString(36).slice(2, 8), label: '', url: '' }); renderLinks(); } });
+      linksList.appendChild(add);
+    }
+    renderLinks();
+    paneMain.appendChild(linksField);
 
     // Milestones editor
     var msField = el('div', 'field');
@@ -2769,7 +2810,8 @@
         startDate: startInput.value, dueDate: dueInput.value,
         progress: parseInt(progInput.value, 10),
         notes: notesInput.value,
-        milestones: p.milestones.filter(function (m) { return m.name.trim(); })
+        milestones: p.milestones.filter(function (m) { return m.name.trim(); }),
+        links: p.links.filter(function (l) { return (l.url || '').trim(); }).map(function (l) { return { id: l.id, label: (l.label || '').trim(), url: l.url.trim() }; })
       };
       if (isNew) { S.addProject(data); toast('Project created', 'success'); }
       else { S.updateProject(projectId, data); toast('Changes saved', 'success'); }
@@ -3048,6 +3090,7 @@
   function filterSVG() { return '<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'; }
   function sortSVG() { return '<svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l-3 3M17 20l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function bookmarkSVG() { return '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'; }
+  function linkSVG() { return '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 006 .5l2-2a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-6-.5l-2 2A4 4 0 0011.7 17l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function gridSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 5h6v14H4zM14 5h6v6h-6zM14 13h6v6h-6z"/></svg>'; }
   function chartSVG() { return '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   function alertSVG() { return '<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; }

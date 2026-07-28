@@ -1280,3 +1280,18 @@ body { background: var(--nm-base); color: var(--nm-text); }
 
 /* Settings: template rows */
 .tpl-row { display: grid; grid-template-columns: 1fr 140px 30px; align-items: center; gap: 10px; }
+
+/* ---- Reference links ------------------------------------------------------ */
+.name-link {
+  flex: 0 0 auto; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--nm-text-soft); background: transparent;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+.name-link:hover { color: var(--nm-accent); }
+.name-link svg { width: 15px; height: 15px; }
+.popover--menu a.menu-opt { text-decoration: none; display: flex; align-items: center; gap: 8px; }
+.popover--menu a.menu-opt svg { width: 15px; height: 15px; flex: none; }
+.popover--menu a.menu-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.links-editor { display: flex; flex-direction: column; gap: 7px; }
+.link-row { display: grid; grid-template-columns: 100px 1fr 28px; align-items: center; gap: 7px; }
