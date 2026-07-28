@@ -18,6 +18,21 @@
   var viewAs = null;           // self-view: null = manager (all); otherwise a person id
   var boardFilter = { owners: [], statuses: [], priorities: [], risk: null };
   var boardSort = 'manual';
+  var editorKeyHandler = null;
+
+  // Build new-project editor seed data from a template.
+  function templateSeed(t) {
+    var today = S.todayISO();
+    var owner = (t.assigneeIds && t.assigneeIds.length) ? t.assigneeIds[0] : (S.state.people[0] && S.state.people[0].id);
+    return {
+      name: t.name, groupId: (t.groupId && S.groupById(t.groupId)) ? t.groupId : S.state.groups[0].id,
+      ownerId: owner, assigneeIds: (t.assigneeIds && t.assigneeIds.length) ? t.assigneeIds.slice() : (owner ? [owner] : []),
+      status: 'not_started', priority: t.priority || 'medium',
+      startDate: today, dueDate: S.addDays(today, t.lengthDays != null ? t.lengthDays : 14),
+      progress: 0, notes: '',
+      milestones: (t.milestones || []).map(function (m) { return { id: 'ms_' + Math.random().toString(36).slice(2, 8), name: m.name, date: S.addDays(today, m.offset || 0), done: false, assigneeId: null }; })
+    };
+  }
 
   function activeFilterCount() {
     var f = boardFilter;
@@ -2079,6 +2094,30 @@
     }
     wrap.appendChild(defSec);
 
+    // ---- Project templates --------------------------------------------------
+    var tplSec = section('Project templates', 'Reusable project blueprints — save one from New Project → “Save as template.” Set a recurrence and it auto-creates on that schedule when you open the app.');
+    var tpls = S.state.templates || [];
+    if (!tpls.length) tplSec.appendChild(el('div', 'settings__count', { text: 'No templates yet.' }));
+    else {
+      var tlist = el('div', 'cat-list');
+      tpls.forEach(function (t) {
+        var row = el('div', 'tpl-row');
+        var nameI = el('input', 'input input--sm', { type: 'text', value: t.name });
+        nameI.addEventListener('change', function () { if (nameI.value.trim()) S.updateTemplate(t.id, { name: nameI.value.trim() }); });
+        var recSel = el('select', 'input input--sm input--select');
+        [['none', 'No repeat'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']].forEach(function (o) {
+          var op = el('option', null, { value: o[0], text: o[1] }); if ((t.recurrence || 'none') === o[0]) op.selected = true; recSel.appendChild(op);
+        });
+        recSel.addEventListener('change', function () { S.updateTemplate(t.id, { recurrence: recSel.value }); });
+        var del = el('button', 'preset-row__del', { html: '&times;', title: 'Remove template' });
+        del.addEventListener('click', function () { if (confirm('Remove template “' + t.name + '”?')) S.removeTemplate(t.id); });
+        row.appendChild(nameI); row.appendChild(recSel); row.appendChild(del);
+        tlist.appendChild(row);
+      });
+      tplSec.appendChild(tlist);
+    }
+    wrap.appendChild(tplSec);
+
     // ---- Categories (groups) ------------------------------------------------
     var catSec = section('Categories', 'The phase buckets on the board. Rename, recolor, add, or remove them. Removing one moves its projects into another category.');
     var catList = el('div', 'cat-list');
@@ -2364,10 +2403,14 @@
   //  PROJECT EDITOR modal
   // ==========================================================================
 
-  function openEditor(projectId, defaultGroupId) {
+  function openEditor(projectId, defaultGroupId, seed) {
+    // Clear any prior editor key handler so re-opening (e.g. via a template) is clean.
+    if (editorKeyHandler) { document.removeEventListener('keydown', editorKeyHandler); editorKeyHandler = null; }
     var isNew = !projectId;
     var p;
-    if (isNew) {
+    if (isNew && seed) {
+      p = seed;
+    } else if (isNew) {
       var d = (S.state.settings && S.state.settings.defaults) || {};
       var today = S.todayISO();
       var owner = (d.ownerId && S.personById(d.ownerId)) ? d.ownerId : (S.state.people[0] && S.state.people[0].id);
@@ -2432,6 +2475,20 @@
     var form = el('div', 'modal__body');
     var paneMain = el('div', 'modal__pane modal__pane--main');
     var paneSide = el('div', 'modal__pane modal__pane--side');
+
+    // Start from a template (new projects only).
+    if (isNew && (S.state.templates || []).length) {
+      var tplField = el('div', 'field');
+      tplField.appendChild(el('label', 'field__label', { text: 'Start from template' }));
+      var tplRow = el('div', 'ms-presets');
+      S.state.templates.forEach(function (t) {
+        var chip = el('button', 'ms-presets__chip', { type: 'button', text: t.name });
+        chip.addEventListener('click', function () { openEditor(null, defaultGroupId, templateSeed(t)); });
+        tplRow.appendChild(chip);
+      });
+      tplField.appendChild(tplRow);
+      paneMain.appendChild(tplField);
+    }
 
     // Name
     var nameInput = field(paneMain, 'Project name', el('input', 'input', { type: 'text', value: p.name, placeholder: 'e.g. Opening Night Graphics' }));
@@ -2681,6 +2738,14 @@
       } });
       foot.appendChild(delBtn);
     }
+    var tplBtn = el('button', 'btn btn--soft', { text: 'Save as template', title: 'Reuse this shape for future projects' });
+    tplBtn.addEventListener('click', function () {
+      var start = startInput.value, due = dueInput.value;
+      var ms = p.milestones.filter(function (m) { return m.name.trim(); }).map(function (m) { return { name: m.name, offset: S.daysBetween(start, m.date) }; });
+      S.addTemplate({ name: nameInput.value.trim() || 'Template', groupId: groupSel.value, priority: prioSel.value, assigneeIds: assigneeIds.slice(), lengthDays: S.daysBetween(start, due), milestones: ms });
+      toast('Saved as template', 'success');
+    });
+    foot.appendChild(tplBtn);
     var spacer = el('div', 'modal__foot-spacer'); foot.appendChild(spacer);
     foot.appendChild(el('button', 'btn btn--soft', { text: 'Cancel', onclick: dismiss }));
     var saveBtn = el('button', 'btn btn--primary', { text: isNew ? 'Create project' : 'Save changes', onclick: save });
@@ -2719,6 +2784,7 @@
     }
     function onKey(e) { if (e.key === 'Escape') dismiss(); }
     document.addEventListener('keydown', onKey);
+    editorKeyHandler = onKey;
 
     // helpers
     function field(parent, label, input) {
@@ -3007,6 +3073,11 @@
 
   // ---- Boot -----------------------------------------------------------------
   applyAppearance(false);
+  // Spawn any recurring templates that came due since last open.
+  (function () {
+    var created = S.runRecurring();
+    if (created.length) setTimeout(function () { toast('Created ' + created.length + ' recurring project' + (created.length === 1 ? '' : 's'), 'success'); }, 900);
+  })();
   // Surface upcoming milestones once on open.
   (function () {
     var r = S.state.settings.reminders;

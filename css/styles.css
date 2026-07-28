@@ -1277,3 +1277,6 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .cmdk__item-label { flex: 1; font-size: 14px; color: var(--nm-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cmdk__item-kind { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--nm-text-soft); font-weight: 700; background: var(--nm-base); box-shadow: var(--nm-inset-sm); padding: 3px 8px; border-radius: 999px; }
 .cmdk__empty { padding: 18px; text-align: center; color: var(--nm-text-soft); font-size: 14px; }
+
+/* Settings: template rows */
+.tpl-row { display: grid; grid-template-columns: 1fr 140px 30px; align-items: center; gap: 10px; }

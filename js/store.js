@@ -77,6 +77,13 @@
     return d.toISOString().slice(0, 10);
   }
 
+  function advanceRecurrence(iso, rec) {
+    if (rec === 'weekly') return addDays(iso, 7);
+    if (rec === 'biweekly') return addDays(iso, 14);
+    if (rec === 'monthly') { var d = new Date(iso + 'T00:00:00'); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); }
+    return addDays(iso, 7);
+  }
+
   function daysBetween(aISO, bISO) {
     var a = new Date(aISO + 'T00:00:00');
     var b = new Date(bISO + 'T00:00:00');
@@ -198,7 +205,8 @@
       milestonePresets: defaultPresets(),
       statuses: cloneList(STATUSES),
       priorities: cloneList(PRIORITIES),
-      savedViews: []
+      savedViews: [],
+      templates: []
     };
   }
 
@@ -279,6 +287,8 @@
         else PRIORITIES.forEach(function (d) { if (!saved.priorities.some(function (s) { return s.id === d.id; })) saved.priorities.push({ id: d.id, label: d.label, color: d.color }); });
         // Saved board views are a later addition.
         if (!saved.savedViews) saved.savedViews = [];
+        // Project templates are a later addition.
+        if (!saved.templates) saved.templates = [];
         return saved;
       }
     } catch (e) { /* ignore */ }
@@ -703,6 +713,86 @@
     removeSavedView: function (id) {
       state.savedViews = (state.savedViews || []).filter(function (v) { return v.id !== id; });
       emit({ type: 'views' });
+    },
+
+    // ---- Project templates + recurrence ----
+    addTemplate: function (tpl) {
+      var t = {
+        id: uid('tpl'),
+        name: tpl.name || 'Template',
+        groupId: tpl.groupId || null,
+        priority: tpl.priority || 'medium',
+        assigneeIds: (tpl.assigneeIds || []).slice(),
+        lengthDays: tpl.lengthDays != null ? tpl.lengthDays : 14,
+        milestones: (tpl.milestones || []).map(function (m) { return { name: m.name, offset: m.offset || 0 }; }),
+        recurrence: tpl.recurrence || 'none',
+        nextRun: tpl.nextRun || null
+      };
+      state.templates.push(t);
+      emit({ type: 'templates' });
+      return t;
+    },
+    updateTemplate: function (id, patch) {
+      var t = (state.templates || []).filter(function (x) { return x.id === id; })[0];
+      if (!t) return;
+      Object.keys(patch).forEach(function (k) { t[k] = patch[k]; });
+      // Setting a recurrence with no schedule yet starts the clock from today.
+      if (patch.recurrence && patch.recurrence !== 'none' && !t.nextRun) t.nextRun = advanceRecurrence(todayISO(), patch.recurrence);
+      if (patch.recurrence === 'none') t.nextRun = null;
+      emit({ type: 'templates' });
+    },
+    removeTemplate: function (id) {
+      state.templates = (state.templates || []).filter(function (x) { return x.id !== id; });
+      emit({ type: 'templates' });
+    },
+
+    // Create a real project from a template, dated from `startISO` (default today).
+    spawnFromTemplate: function (id, startISO) {
+      var t = (state.templates || []).filter(function (x) { return x.id === id; })[0];
+      if (!t) return null;
+      var start = startISO || todayISO();
+      var ids = (t.assigneeIds && t.assigneeIds.length) ? t.assigneeIds.slice() : [state.people[0] && state.people[0].id];
+      var p = {
+        id: uid('prj'),
+        name: t.name,
+        groupId: (t.groupId && groupById(t.groupId)) ? t.groupId : state.groups[0].id,
+        ownerId: ids[0], assigneeIds: ids,
+        status: 'not_started', priority: t.priority || 'medium',
+        startDate: start, dueDate: addDays(start, t.lengthDays != null ? t.lengthDays : 14),
+        progress: 0, notes: '',
+        color: nextProjectColor(state.projects),
+        milestones: (t.milestones || []).map(function (m) { return { id: uid('ms'), name: m.name, date: addDays(start, m.offset || 0), done: false, assigneeId: null }; }),
+        createdAt: todayISO()
+      };
+      state.projects.unshift(p);
+      emit({ type: 'add', id: p.id });
+      return p;
+    },
+
+    // Spawn any recurring templates that are due. Returns names created.
+    runRecurring: function () {
+      var today = todayISO(), created = [];
+      (state.templates || []).forEach(function (t) {
+        if (!t.recurrence || t.recurrence === 'none' || !t.nextRun) return;
+        if (today >= t.nextRun) {
+          // Create one (avoid backlog floods) and schedule the next from today.
+          var ids = (t.assigneeIds && t.assigneeIds.length) ? t.assigneeIds.slice() : [state.people[0] && state.people[0].id];
+          var p = {
+            id: uid('prj'), name: t.name,
+            groupId: (t.groupId && groupById(t.groupId)) ? t.groupId : state.groups[0].id,
+            ownerId: ids[0], assigneeIds: ids, status: 'not_started', priority: t.priority || 'medium',
+            startDate: today, dueDate: addDays(today, t.lengthDays != null ? t.lengthDays : 14),
+            progress: 0, notes: '', color: nextProjectColor(state.projects),
+            milestones: (t.milestones || []).map(function (m) { return { id: uid('ms'), name: m.name, date: addDays(today, m.offset || 0), done: false, assigneeId: null }; }),
+            createdAt: today
+          };
+          state.projects.unshift(p);
+          t.nextRun = advanceRecurrence(today, t.recurrence);
+          created.push(t.name);
+        }
+      });
+      if (created.length) emit({ type: 'recurring' });
+      return created;
     },
 
     // ---- Milestone presets ----
