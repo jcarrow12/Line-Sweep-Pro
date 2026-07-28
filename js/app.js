@@ -2818,6 +2818,67 @@
     });
   }
 
+  // ---- Command palette (Cmd/Ctrl-K) -----------------------------------------
+  function paletteCommands() {
+    var cmds = [];
+    [['board', 'Board'], ['timeline', 'Timeline'], ['kanban', 'Kanban'], ['people', 'Team'], ['dashboard', 'Insights'], ['reports', 'Reports'], ['settings', 'Settings']].forEach(function (v) {
+      cmds.push({ label: 'Go to ' + v[1], kind: 'view', run: function () { navTo(v[0]); } });
+    });
+    cmds.push({ label: 'New project', kind: 'action', run: function () { openEditor(null); } });
+    cmds.push({ label: 'Upcoming milestones', kind: 'action', run: function () { var b = document.getElementById('reminderBtn'); if (b) openReminders(b); } });
+    cmds.push({ label: 'Toggle theme (light / dark)', kind: 'action', run: function () { var t = (S.state.settings.theme || 'auto'); S.setTheme(t === 'dark' ? 'light' : 'dark'); } });
+    cmds.push({ label: 'Toggle density (comfortable / compact)', kind: 'action', run: function () { var dn = (S.state.settings.density || 'comfortable'); S.setDensity(dn === 'compact' ? 'comfortable' : 'compact'); } });
+    return cmds;
+  }
+  function openPalette() {
+    if (document.querySelector('.cmdk')) return;
+    closePopover();
+    var host = el('div', 'cmdk');
+    var backdrop = el('div', 'cmdk__backdrop');
+    var panel = el('div', 'cmdk__panel');
+    var input = el('input', 'cmdk__input', { type: 'text', placeholder: 'Search projects or jump to…', spellcheck: 'false' });
+    var listEl = el('div', 'cmdk__list');
+    panel.appendChild(input); panel.appendChild(listEl);
+    host.appendChild(backdrop); host.appendChild(panel);
+    document.body.appendChild(host);
+    var sel = 0, current = [];
+    function build() {
+      var q = input.value.trim().toLowerCase();
+      var items = paletteCommands().filter(function (c) { return !q || c.label.toLowerCase().indexOf(q) !== -1; });
+      if (q) {
+        S.state.projects.filter(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 6).forEach(function (p) {
+          items.push({ label: p.name, kind: 'project', run: function () { openEditor(p.id); } });
+        });
+      }
+      current = items; if (sel >= items.length) sel = 0; if (sel < 0) sel = 0;
+      clear(listEl);
+      if (!items.length) { listEl.appendChild(el('div', 'cmdk__empty', { text: 'No matches' })); return; }
+      items.forEach(function (it, i) {
+        var row = el('div', 'cmdk__item' + (i === sel ? ' is-sel' : ''));
+        row.appendChild(el('span', 'cmdk__item-label', { text: it.label }));
+        if (it.kind) row.appendChild(el('span', 'cmdk__item-kind', { text: it.kind }));
+        row.addEventListener('mousemove', function () { if (sel !== i) { sel = i; hi(); } });
+        row.addEventListener('click', function () { run(it); });
+        listEl.appendChild(row);
+      });
+    }
+    function hi() { Array.prototype.forEach.call(listEl.querySelectorAll('.cmdk__item'), function (r, i) { r.classList.toggle('is-sel', i === sel); if (i === sel) r.scrollIntoView({ block: 'nearest' }); }); }
+    function run(it) { close(); if (it && it.run) it.run(); }
+    function close() { document.removeEventListener('keydown', onKey, true); host.remove(); }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(current.length - 1, sel + 1); hi(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); hi(); }
+      else if (e.key === 'Enter') { e.preventDefault(); run(current[sel]); }
+    }
+    input.addEventListener('input', build);
+    document.addEventListener('keydown', onKey, true);
+    backdrop.addEventListener('click', close);
+    build();
+    setTimeout(function () { input.focus(); }, 20);
+    if (M.enter) M.enter(panel, { y: 8, duration: 180 });
+  }
+
   function render() {
     applyAppearance(true);
     updateViewAsBanner();
@@ -2931,6 +2992,18 @@
     var bell = document.getElementById('reminderBtn');
     if (bell) bell.addEventListener('click', function () { openReminders(bell); });
   })();
+
+  // Global keyboard shortcuts: Cmd/Ctrl-K palette, N new project, / search.
+  document.addEventListener('keydown', function (e) {
+    var mod = e.metaKey || e.ctrlKey;
+    if (mod && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openPalette(); return; }
+    var t = (e.target && e.target.tagName) || '';
+    var typing = t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || (e.target && e.target.isContentEditable);
+    if (typing || mod || e.altKey) return;
+    if (!modalHost.hidden || document.querySelector('.cmdk')) return; // modal/palette open
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openEditor(null); }
+    else if (e.key === '/') { e.preventDefault(); searchInput.focus(); }
+  });
 
   // ---- Boot -----------------------------------------------------------------
   applyAppearance(false);

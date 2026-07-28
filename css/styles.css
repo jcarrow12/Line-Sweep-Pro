@@ -1258,3 +1258,22 @@ body { background: var(--nm-base); color: var(--nm-text); }
 .view-row__open:hover { background: rgba(156,165,178,.12); }
 .view-row__del { border: 0; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 8px; font-size: 16px; color: var(--nm-text-soft); }
 .view-row__del:hover { color: #b04e5b; }
+
+/* ---- Command palette ------------------------------------------------------ */
+.cmdk { position: fixed; inset: 0; z-index: 400; display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+.cmdk__backdrop { position: absolute; inset: 0; background: rgba(20,26,50,.42); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+:root[data-theme="dark"] .cmdk__backdrop { background: rgba(0,0,0,.5); }
+.cmdk__panel {
+  position: relative; width: 100%; max-width: 560px; border-radius: 16px; overflow: hidden;
+  background: var(--nm-base); background-image: var(--nm-grad); box-shadow: var(--nm-raised), 0 20px 50px rgba(0,0,0,.28);
+}
+.cmdk__input {
+  width: 100%; border: 0; outline: none; padding: 18px 20px; font-size: 16px; font-family: inherit;
+  color: var(--nm-text); background: transparent; border-bottom: 1px solid var(--line-soft);
+}
+.cmdk__list { max-height: 46vh; overflow-y: auto; padding: 8px; }
+.cmdk__item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+.cmdk__item.is-sel { background: rgba(156,165,178,.16); }
+.cmdk__item-label { flex: 1; font-size: 14px; color: var(--nm-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdk__item-kind { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--nm-text-soft); font-weight: 700; background: var(--nm-base); box-shadow: var(--nm-inset-sm); padding: 3px 8px; border-radius: 999px; }
+.cmdk__empty { padding: 18px; text-align: center; color: var(--nm-text-soft); font-size: 14px; }
